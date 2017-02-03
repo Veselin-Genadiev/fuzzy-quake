@@ -15,17 +15,39 @@ namespace FuzzyQuake.Lib
 
         public EarthQuakeInferenceSystem()
         {
-            this.BuildInferenceSystem();
             this.StartDate = DateTime.Now;
+            this.BuildInferenceSystem();
         }
 
         public void BuildInferenceSystem()
         {
-            var lvDistance = GetDistanceVariable();
+            // Input
+            var lvDistance = GetDistanceVariable("Distance");
             var lvDate = GetDateVariable();
-            var lvMagnitude = GetMagnitudeVariable();
+            var lvMagnitude = GetMagnitudeVariable("Magnitude");
             var lvDepth = GetDepthVariable();
-            var lvSeismicEnv = GetSeismicEnvironmentVariable();
+
+            // Output
+            var lvSeismicEnv = GetSeismicityVariable("Seismicity");
+            var lvWeekSeismicEnv = GetSeismicityVariable("WeekSeismicity");
+            var lvMonthSeismicEnv = GetSeismicityVariable("MonthSeismicity");
+            var lvSixMonthsSeismicEnv = GetSeismicityVariable("SixMonthsSeismicity");
+
+            // Input Calculated average earthquake distances
+            var lvAvgWeekDistance = GetDistanceVariable("AvgWeekDistance");
+            var lvAvgTwoWeeksDistance = GetDistanceVariable("AvgTwoWeeksDistance");
+            var lvAvgFiveYearsDistance = GetDistanceVariable("AvgFiveYearsDistance");
+            var lvAvgTenYearsDistance = GetDistanceVariable("AvgTenYearsDistance");
+            var lvAvgFiftyYearsDistance = GetDistanceVariable("AvgFiftyYearsDistance");
+            var lvAvgCenturyDistance = GetDistanceVariable("AvgCenturyDistance");
+
+            // Input Calculated maximum earthquake magnitude
+            var lvMaxWeekMagnitude = GetMagnitudeVariable("MaxWeekMagnitude");
+            var lvMaxTwoWeeksMagnitude = GetMagnitudeVariable("MaxTwoWeeksMagnitude");
+            var lvMaxFiveYearsMagnitude = GetMagnitudeVariable("MaxFiveYearsMagnitude");
+            var lvMaxTenYearsMagnitude = GetMagnitudeVariable("MaxTenYearsMagnitude");
+            var lvMaxFiftyYearsMagnitude = GetMagnitudeVariable("MaxFiftyYearsMagnitude");
+            var lvMaxCenturyMagnitude = GetMagnitudeVariable("MaxCenturyMagnitude");
 
             Database fuzzyDB = new Database();
             fuzzyDB.AddVariable(lvDistance);
@@ -33,11 +55,109 @@ namespace FuzzyQuake.Lib
             fuzzyDB.AddVariable(lvMagnitude);
             fuzzyDB.AddVariable(lvDepth);
             fuzzyDB.AddVariable(lvSeismicEnv);
+            fuzzyDB.AddVariable(lvWeekSeismicEnv);
+            fuzzyDB.AddVariable(lvMonthSeismicEnv);
+            fuzzyDB.AddVariable(lvSixMonthsSeismicEnv);
+
+            fuzzyDB.AddVariable(lvAvgWeekDistance);
+            fuzzyDB.AddVariable(lvAvgTwoWeeksDistance);
+            fuzzyDB.AddVariable(lvAvgFiveYearsDistance);
+            fuzzyDB.AddVariable(lvAvgTenYearsDistance);
+            fuzzyDB.AddVariable(lvAvgFiftyYearsDistance);
+            fuzzyDB.AddVariable(lvAvgCenturyDistance);
+
+            fuzzyDB.AddVariable(lvMaxWeekMagnitude);
+            fuzzyDB.AddVariable(lvMaxTwoWeeksMagnitude);
+            fuzzyDB.AddVariable(lvMaxFiveYearsMagnitude);
+            fuzzyDB.AddVariable(lvMaxTenYearsMagnitude);
+            fuzzyDB.AddVariable(lvMaxFiftyYearsMagnitude);
+            fuzzyDB.AddVariable(lvMaxCenturyMagnitude);
 
             quakeSystem = new InferenceSystem(fuzzyDB, new CentroidDefuzzifier(1000));
+
+            // Current seismicity rules
+
+            string nearAndSoonClause = "(Distance is VeryNear OR Distance IS Near) AND (Date IS Week OR Date IS TwoWeeks)";
+            string tooStrongMagnitudeClause = "(Magnitude IS Great OR Magnitude IS Major)";
+            string strongMagnitudeClause = "Magnitude IS Strong";
+            string moderateMagnitudeClause = "Magnitude IS Moderate";
+            string lightMagnitudeClause = "Magnitude IS Light";
+            string belowLightMagnitudeClause = "(Magnitude IS Light OR Magnitude IS Minor OR Magnitude IS Micro)";
+            string shallowDepthClause = "Depth IS Shallow";
+            string notShallowDepthClause = "Depth IS NOT Shallow";
+            string fairlyDeepClause = "(Depth IS Fairly OR Depth is Deep)";
+            string veryDeepClause = "Depth IS VeryDeep";
+
+            // near events
+            quakeSystem.NewRule("Rule 1", "IF " + nearAndSoonClause +
+                " AND " + tooStrongMagnitudeClause + " THEN Seismicity IS Great");
+
+            quakeSystem.NewRule("Rule 2", "IF " + nearAndSoonClause +
+                " AND "+ strongMagnitudeClause + " AND " + shallowDepthClause + " THEN Seismicity is Great");
+
+            quakeSystem.NewRule("Rule 3", "IF " + nearAndSoonClause +
+                " AND " + strongMagnitudeClause + " AND " + fairlyDeepClause + " THEN Seismicity is Strong");
+
+            quakeSystem.NewRule("Rule 4", "IF " + nearAndSoonClause +
+                " AND " + strongMagnitudeClause + " AND " + veryDeepClause + " THEN Seismicity is Medium");
+
+            quakeSystem.NewRule("Rule 5", "IF " + nearAndSoonClause +
+                " AND " + moderateMagnitudeClause + " AND " + shallowDepthClause + " THEN Seismicity is Strong");
+
+            quakeSystem.NewRule("Rule 6", "IF " + nearAndSoonClause +
+                " AND " + moderateMagnitudeClause + " AND "+ notShallowDepthClause + " THEN Seismicity is Medium");
+
+            quakeSystem.NewRule("Rule 7", "IF " + nearAndSoonClause +
+                " AND " + lightMagnitudeClause + " AND " + shallowDepthClause + " THEN Seismicity is Medium");
+
+            quakeSystem.NewRule("Rule 8", "IF " + nearAndSoonClause +
+                " AND " + belowLightMagnitudeClause + " AND " + notShallowDepthClause + " THEN Seismicity is Low");
+
+            // far events
+            string farAndSoonClause = "(Distance IS Fair OR Distance IS Far) AND (Date IS Week OR Date IS TwoWeeks)";
+            quakeSystem.NewRule("Rule 9", "IF " + farAndSoonClause + " AND " +
+                tooStrongMagnitudeClause + " THEN Seismicity IS Strong");
+
+            quakeSystem.NewRule("Rule 9", "IF " + farAndSoonClause + " AND " + strongMagnitudeClause +
+                " AND " + shallowDepthClause + " THEN Seismicity IS Strong");
+
+            quakeSystem.NewRule("Rule 10", "IF " + farAndSoonClause + " AND " + strongMagnitudeClause +
+                " AND " + fairlyDeepClause + " THEN Seismicity IS Medium");
+
+            quakeSystem.NewRule("Rule 11", "IF " + farAndSoonClause + " AND " + strongMagnitudeClause +
+                " AND " + veryDeepClause + " THEN Seismicity IS Low");
+
+            quakeSystem.NewRule("Rule 12", "IF " + farAndSoonClause + " AND " + moderateMagnitudeClause +
+                " AND " + shallowDepthClause + " THEN Seismicity IS Medium");
+
+            quakeSystem.NewRule("Rule 13", "IF " + farAndSoonClause + " AND " + moderateMagnitudeClause +
+                " AND " + notShallowDepthClause + " THEN Seismicity IS Low");
+
+            quakeSystem.NewRule("Rule 14", "IF " + farAndSoonClause + " AND " +
+                "(" + lightMagnitudeClause + " OR " + belowLightMagnitudeClause + ")" +
+                " THEN Seismicity IS Low");
+
+            // very far events
+            quakeSystem.NewRule("Rule 15", "IF Distance IS VeryFar AND (Date IS Week OR Date IS TwoWeeks) THEN Seismicity IS Low");
+
+            // Predict next week
+            /*"AvgWeekDistance";
+            "AvgTwoWeeksDistance";
+            "MaxWeekMagnitude";
+            "MaxTwoWeeksMagnitude";
+
+            "AvgFiveYearsDistance";
+            "AvgTenYearsDistance";
+            "MaxFiveYearsMagnitude";
+            "MaxTenYearsMagnitude";
+
+            "AvgFiftyYearsDistance";
+            "AvgCenturyDistance";
+            "MaxFiftyYearsMagnitude";
+            "MaxCenturyMagnitude";*/
         }
 
-        private LinguisticVariable GetDistanceVariable()
+        private LinguisticVariable GetDistanceVariable(string distanceType)
         {
             FuzzySet distanceVeryNear = new FuzzySet("VeryNear", new TrapezoidalFunction(0, 0, 10));
             FuzzySet distanceNear = new FuzzySet("Near", new TrapezoidalFunction(8, 14, 20));
@@ -45,7 +165,7 @@ namespace FuzzyQuake.Lib
             FuzzySet distanceFar = new FuzzySet("Far", new TrapezoidalFunction(18, 24, 30));
             FuzzySet distanceVeryFar = new FuzzySet("VeryFar", new TrapezoidalFunction(30, 30, float.MaxValue));
 
-            LinguisticVariable lvDistance = new LinguisticVariable("Distance", 0, float.MaxValue);
+            LinguisticVariable lvDistance = new LinguisticVariable(distanceType, 0, float.MaxValue);
             lvDistance.AddLabel(distanceVeryNear);
             lvDistance.AddLabel(distanceNear);
             lvDistance.AddLabel(distanceFair);
@@ -100,7 +220,7 @@ namespace FuzzyQuake.Lib
             return lvDate;
         }
 
-        private LinguisticVariable GetMagnitudeVariable()
+        private LinguisticVariable GetMagnitudeVariable(string magType)
         {
             FuzzySet microMagnitude = new FuzzySet("Micro", new TrapezoidalFunction(0, 0, 2, 2.2f));
             FuzzySet minorMagnitude = new FuzzySet("Minor", new TrapezoidalFunction(1.8f, 2, 4, 4.2f));
@@ -110,7 +230,7 @@ namespace FuzzyQuake.Lib
             FuzzySet majorMagnitude = new FuzzySet("Major", new TrapezoidalFunction(6.8f, 7, 8, 8.2f));
             FuzzySet greatMagnitude = new FuzzySet("Great", new TrapezoidalFunction(7.8f, 8, 12, 12));
 
-            LinguisticVariable lvMagnitude = new LinguisticVariable("Magnitude", 0, 12);
+            LinguisticVariable lvMagnitude = new LinguisticVariable(magType, 0, 12);
 
             lvMagnitude.AddLabel(microMagnitude);
             lvMagnitude.AddLabel(minorMagnitude);
@@ -140,16 +260,16 @@ namespace FuzzyQuake.Lib
             return lvDepth;
         }
 
-        private LinguisticVariable GetSeismicEnvironmentVariable()
+        private LinguisticVariable GetSeismicityVariable(string seismicityType)
         {
-            FuzzySet insignificantEnv = new FuzzySet("Insignificant", new TrapezoidalFunction(0, 0, 4, 4.2f));
+            FuzzySet lowEnv = new FuzzySet("Low", new TrapezoidalFunction(0, 0, 4, 4.2f));
             FuzzySet mediumEnv = new FuzzySet("Medium", new TrapezoidalFunction(3.8f, 4, 8, 8.2f));
             FuzzySet strongEnv = new FuzzySet("Strong", new TrapezoidalFunction(6.8f, 7, 10, 10.2f));
             FuzzySet greatEnv = new FuzzySet("Great", new TrapezoidalFunction(7.8f, 8, 12, 12));
 
-            LinguisticVariable lvSeismicEnv = new LinguisticVariable("SeismicEnvironment", 1, 12);
+            LinguisticVariable lvSeismicEnv = new LinguisticVariable(seismicityType, 1, 12);
 
-            lvSeismicEnv.AddLabel(insignificantEnv);
+            lvSeismicEnv.AddLabel(lowEnv);
             lvSeismicEnv.AddLabel(mediumEnv);
             lvSeismicEnv.AddLabel(strongEnv);
             lvSeismicEnv.AddLabel(greatEnv);
