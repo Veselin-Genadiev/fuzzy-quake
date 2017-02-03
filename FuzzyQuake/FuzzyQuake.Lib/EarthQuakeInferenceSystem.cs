@@ -22,7 +22,7 @@ namespace FuzzyQuake.Lib
         public void BuildInferenceSystem()
         {
             // Input
-            var lvDistance = GetDistanceVariable("Distance");
+            var lvDistance = GetDistanceVariable();
             var lvDate = GetDateVariable();
             var lvMagnitude = GetMagnitudeVariable("Magnitude");
             var lvDepth = GetDepthVariable();
@@ -33,13 +33,13 @@ namespace FuzzyQuake.Lib
             var lvMonthSeismicEnv = GetSeismicityVariable("MonthSeismicity");
             var lvSixMonthsSeismicEnv = GetSeismicityVariable("SixMonthsSeismicity");
 
-            // Input Calculated average earthquake distances
-            var lvAvgWeekDistance = GetDistanceVariable("AvgWeekDistance");
-            var lvAvgTwoWeeksDistance = GetDistanceVariable("AvgTwoWeeksDistance");
-            var lvAvgFiveYearsDistance = GetDistanceVariable("AvgFiveYearsDistance");
-            var lvAvgTenYearsDistance = GetDistanceVariable("AvgTenYearsDistance");
-            var lvAvgFiftyYearsDistance = GetDistanceVariable("AvgFiftyYearsDistance");
-            var lvAvgCenturyDistance = GetDistanceVariable("AvgCenturyDistance");
+            // Input Calculated average earthquake concetration (near only)
+            var lvWeekConcentration = GetConcentrationVariable("WeekConcentration", StartDate, StartDate.AddDays(-7));
+            var lvTwoWeeksConcentration = GetConcentrationVariable("TwoWeeksConcentration", StartDate.AddDays(-7), StartDate.AddDays(-14));
+            var lvFiveYearsConcentration = GetConcentrationVariable("FiveYearsConcentration", StartDate.AddDays(-14), StartDate.AddYears(-5));
+            var lvTenYearsConcentration = GetConcentrationVariable("TenYearsConcentration", StartDate.AddYears(-5), StartDate.AddYears(-10));
+            var lvFiftyYearsConcentration = GetConcentrationVariable("FiftyYearsConcentration ", StartDate.AddYears(-10), StartDate.AddYears(-50));
+            var lvCenturyConcentration = GetConcentrationVariable("CenturyConcentration", StartDate.AddYears(-50), StartDate.AddYears(-100));
 
             // Input Calculated maximum earthquake magnitude
             var lvMaxWeekMagnitude = GetMagnitudeVariable("MaxWeekMagnitude");
@@ -59,12 +59,12 @@ namespace FuzzyQuake.Lib
             fuzzyDB.AddVariable(lvMonthSeismicEnv);
             fuzzyDB.AddVariable(lvSixMonthsSeismicEnv);
 
-            fuzzyDB.AddVariable(lvAvgWeekDistance);
-            fuzzyDB.AddVariable(lvAvgTwoWeeksDistance);
-            fuzzyDB.AddVariable(lvAvgFiveYearsDistance);
-            fuzzyDB.AddVariable(lvAvgTenYearsDistance);
-            fuzzyDB.AddVariable(lvAvgFiftyYearsDistance);
-            fuzzyDB.AddVariable(lvAvgCenturyDistance);
+            fuzzyDB.AddVariable(lvWeekConcentration);
+            fuzzyDB.AddVariable(lvTwoWeeksConcentration);
+            fuzzyDB.AddVariable(lvFiveYearsConcentration);
+            fuzzyDB.AddVariable(lvTenYearsConcentration);
+            fuzzyDB.AddVariable(lvFiftyYearsConcentration);
+            fuzzyDB.AddVariable(lvCenturyConcentration);
 
             fuzzyDB.AddVariable(lvMaxWeekMagnitude);
             fuzzyDB.AddVariable(lvMaxTwoWeeksMagnitude);
@@ -140,24 +140,75 @@ namespace FuzzyQuake.Lib
             // very far events
             quakeSystem.NewRule("Rule 15", "IF Distance IS VeryFar AND (Date IS Week OR Date IS TwoWeeks) THEN Seismicity IS Low");
 
-            // Predict next week
-            /*"AvgWeekDistance";
-            "AvgTwoWeeksDistance";
-            "MaxWeekMagnitude";
-            "MaxTwoWeeksMagnitude";
+            // Predict next week - subsiding
+            string soonClause = "Date IS Week OR Date IS TwoWeeks";
 
-            "AvgFiveYearsDistance";
-            "AvgTenYearsDistance";
-            "MaxFiveYearsMagnitude";
-            "MaxTenYearsMagnitude";
+            quakeSystem.NewRule("Rule 16", "IF " + soonClause + " AND (WeekConcentration IS Big OR TwoWeeksConcentration IS Big) " +
+                "AND (MaxWeekMagnitude IS Great OR MaxTwoWeeksMagnitude IS Great OR " +
+                     "MaxWeekMagnitude IS Major OR MaxTwoWeeksMagnitude IS Major)" +
+                     " THEN WeekSeismicity IS Strong");
 
-            "AvgFiftyYearsDistance";
-            "AvgCenturyDistance";
-            "MaxFiftyYearsMagnitude";
-            "MaxCenturyMagnitude";*/
+            quakeSystem.NewRule("Rule 17", "IF " + soonClause + " AND (WeekConcentration IS Big OR TwoWeeksConcentration IS Big) " +
+                "AND (MaxWeekMagnitude IS Strong OR MaxTwoWeeksMagnitude IS Strong OR " +
+                     "MaxWeekMagnitude IS Moderate OR MaxTwoWeeksMagnitude IS Moderate)" +
+                     " THEN WeekSeismicity IS Medium");
+
+            quakeSystem.NewRule("Rule 18", "IF " + soonClause + " AND (WeekConcentration IS Big OR TwoWeeksConcentration IS Big) " +
+                "AND (MaxWeekMagnitude IS Light OR MaxTwoWeeksMagnitude IS Light OR " +
+                     "MaxWeekMagnitude IS Minor OR MaxTwoWeeksMagnitude IS Minor OR " +
+                     "MaxWeekMagnitude IS Micro OR MaxTwoWeeksMagnitude IS Micro)" +
+                     " THEN WeekSeismicity IS Low");
+
+            // Predict next month - next wave Strong or Medium
+            quakeSystem.NewRule("Rule 19", "IF " + soonClause + " AND FiveYearsConcentration IS Medium AND TenYearsConcentration IS Medium " +
+                "AND (MaxFiveYearsMagnitude IS Strong AND MaxTenYearsMagnitude IS Strong OR " +
+                     "MaxFiveYearsMagnitude IS Moderate AND MaxTenYearsMagnitude IS Moderate)" +
+                     " THEN MonthSeismicity IS Strong");
+
+            quakeSystem.NewRule("Rule 20", "IF " + soonClause + " AND FiveYearsConcentration IS Medium AND TenYearsConcentration IS Medium " +
+                "AND MaxFiveYearsMagnitude IS Light AND MaxTenYearsMagnitude IS Light" +
+                     " THEN MonthSeismicity IS Medium");
+
+            quakeSystem.NewRule("Rule 21", "IF " + soonClause + " AND FiveYearsConcentration IS Medium AND TenYearsConcentration IS Medium " +
+                "AND (MaxFiveYearsMagnitude IS Minor OR MaxFiveYearsMagnitude IS Micro) AND " +
+                    "(MaxTenYearsMagnitude IS Minor OR MaxTenYearsMagnitude IS Micro)" +
+                     " THEN MonthSeismicity IS Low");
+
+            // Predict next 6 months
+            quakeSystem.NewRule("Rule 22", "IF " + soonClause + " AND FiftyYearsConcentration IS Low AND CenturyConcentration IS Low " +
+                "AND (MaxFiftyYearsMagnitude IS Great AND MaxCenturyMagnitude IS Great OR " +
+                     "MaxFiftyYearsMagnitude IS Major AND MaxCenturyMagnitude IS Major)" +
+                     " THEN SixMonthsSeismicity IS Great");
+
+            quakeSystem.NewRule("Rule 23", "IF " + soonClause +
+                "AND NOT (MaxFiftyYearsMagnitude IS Great AND MaxCenturyMagnitude IS Great OR " +
+                     "MaxFiftyYearsMagnitude IS Major AND MaxCenturyMagnitude IS Major)" +
+                     " THEN SixMonthsSeismicity IS Low");
         }
 
-        private LinguisticVariable GetDistanceVariable(string distanceType)
+        private LinguisticVariable GetConcentrationVariable(string period, DateTime dateFrom, DateTime dateTo)
+        {
+            var offset = dateTo - dateFrom;
+            int days = offset.Days;
+            float bigPercent = 0.04f;
+            float mediumPercent = 0.02f;
+            float smallPercent = 0.01f;
+
+
+            FuzzySet smallConcentration = new FuzzySet("Small", new TrapezoidalFunction(0, 0, smallPercent * days, mediumPercent * days));
+            FuzzySet mediumConcentration = new FuzzySet("Medium", new TrapezoidalFunction(smallPercent * days, mediumPercent * days, bigPercent * days));
+            FuzzySet bigConcentration = new FuzzySet("Big", new TrapezoidalFunction(mediumPercent * days, bigPercent * days, TrapezoidalFunction.EdgeType.Left));
+
+            LinguisticVariable lvConcentration = new LinguisticVariable(period, 0, float.MaxValue);
+
+            lvConcentration.AddLabel(smallConcentration);
+            lvConcentration.AddLabel(mediumConcentration);
+            lvConcentration.AddLabel(bigConcentration);
+
+            return lvConcentration;
+        }
+
+        private LinguisticVariable GetDistanceVariable()
         {
             FuzzySet distanceVeryNear = new FuzzySet("VeryNear", new TrapezoidalFunction(0, 0, 10));
             FuzzySet distanceNear = new FuzzySet("Near", new TrapezoidalFunction(8, 14, 20));
@@ -165,7 +216,7 @@ namespace FuzzyQuake.Lib
             FuzzySet distanceFar = new FuzzySet("Far", new TrapezoidalFunction(18, 24, 30));
             FuzzySet distanceVeryFar = new FuzzySet("VeryFar", new TrapezoidalFunction(30, 30, float.MaxValue));
 
-            LinguisticVariable lvDistance = new LinguisticVariable(distanceType, 0, float.MaxValue);
+            LinguisticVariable lvDistance = new LinguisticVariable("Distance", 0, float.MaxValue);
             lvDistance.AddLabel(distanceVeryNear);
             lvDistance.AddLabel(distanceNear);
             lvDistance.AddLabel(distanceFair);
