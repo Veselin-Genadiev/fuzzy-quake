@@ -4,6 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Accord.Fuzzy;
+using System.IO;
+using FuzzyQuake.Lib.Utils;
+using System.Device.Location;
 
 namespace FuzzyQuake.Lib
 {
@@ -13,14 +16,163 @@ namespace FuzzyQuake.Lib
 
         public DateTime StartDate { get; set; }
 
-        public EarthQuakeInferenceSystem()
+        public EarthQuakeInferenceSystem() :
+            this(DateTime.Now)
         {
-            this.StartDate = DateTime.Now;
+        }
+
+        public EarthQuakeInferenceSystem(DateTime startDate)
+        {
+            this.StartDate = startDate;
             this.BuildInferenceSystem();
+        }
+
+        /// <summary>
+        /// Input CSV must have these field:
+        /// time - UTC format
+        /// latitude
+        /// longitude
+        /// depth (km)
+        /// mag
+        /// </summary>
+        /// <param name="csvPath"></param>
+        public void ProvideInput(string csvPath, float currentLatitude, float currentLongitude)
+        {
+            var lines = File.ReadAllLines(csvPath);
+            int n = lines.Count() - 1;
+            Inputs inputs = new Inputs(n);
+            var currentCoordinate = new GeoCoordinate(currentLatitude, currentLongitude);
+
+            for (int i = 1; i < lines.Length; i++)
+            {
+                var line = lines[i];
+                var values = line.Split(';');
+                long time = DateTime.Parse(values[0]).Ticks;
+                float latitude = float.Parse(values[1]);
+                float longitude = float.Parse(values[2]);
+                var coordinate = new GeoCoordinate(latitude, longitude);
+
+                float depth = float.Parse(values[3]);
+                float magnitude = float.Parse(values[4]);
+
+                inputs.Times[i - 1] = time;
+                inputs.Distances[i - 1] = (float)currentCoordinate.GetDistanceTo(coordinate);
+                inputs.Depths[i - 1] = depth;
+                inputs.Magnitudes[i - 1] = magnitude;
+            }
+
+            for (int i = 0; i < n; i++)
+            {
+                var magnitudes = inputs.Magnitudes.Where((d, index) => inputs.Distances[index] < 10)
+                    .SkipWhile((d, index) => inputs.Times[index] < StartDate.Ticks);
+
+                var weekMagnitudes = magnitudes.TakeWhile((d, index) => inputs.Times[index] > StartDate.AddDays(-7).Ticks);
+                inputs.WeekConcentrations[i] = weekMagnitudes.Count();
+                inputs.MaxWeekMagnitudes[i] = weekMagnitudes.Max();
+
+                magnitudes = magnitudes.SkipWhile((d, index) => inputs.Times[index] < StartDate.AddDays(-7).Ticks);
+
+                var twoWeekMagnitudes = magnitudes.TakeWhile((d, index) => inputs.Times[index] > StartDate.AddDays(-14).Ticks);
+                inputs.TwoWeeksConcentrations[i] = twoWeekMagnitudes.Count();
+                inputs.MaxTwoWeeksMagnitudes[i] = twoWeekMagnitudes.Max();
+
+                magnitudes = magnitudes.SkipWhile((d, index) => inputs.Times[index] < StartDate.AddDays(-14).Ticks);
+
+                var fiveYearMagnitudes = magnitudes.TakeWhile((d, index) => inputs.Times[index] > StartDate.AddYears(-1).Ticks);
+                inputs.FiveYearsConcentrations[i] = fiveYearMagnitudes.Count();
+                inputs.MaxFiveYearsMagnitudes[i] = fiveYearMagnitudes.Max();
+
+                magnitudes = magnitudes.SkipWhile((d, index) => inputs.Times[index] < StartDate.AddYears(-5).Ticks);
+
+                var tenYearMagnitudes = magnitudes.TakeWhile((d, index) => inputs.Times[index] > StartDate.AddYears(-10).Ticks);
+                inputs.TenYearsConcentrations[i] = tenYearMagnitudes.Count();
+                inputs.MaxTenYearsMagnitudes[i] = tenYearMagnitudes.Max();
+
+                magnitudes = magnitudes.SkipWhile((d, index) => inputs.Times[index] < StartDate.AddYears(-10).Ticks);
+
+                var fiftyYearMagnitudes = magnitudes.TakeWhile((d, index) => inputs.Times[index] > StartDate.AddYears(-50).Ticks);
+                inputs.FiftyYearsConcentrations[i] = fiftyYearMagnitudes.Count();
+                inputs.MaxFiftyYearsMagnitudes[i] = fiftyYearMagnitudes.Max();
+
+                magnitudes = magnitudes.SkipWhile((d, index) => inputs.Times[index] < StartDate.AddYears(-50).Ticks);
+
+                var centuryMagnitudes = magnitudes.TakeWhile((d, index) => inputs.Times[index] > StartDate.AddYears(-100).Ticks);
+                inputs.CenturyConcentrations[i] = centuryMagnitudes.Count();
+                inputs.MaxCenturyMagnitudes[i] = centuryMagnitudes.Max();
+            }
+
+            for (int i = 0; i < n; i++)
+            {
+                quakeSystem.SetInput("Date", inputs.Times[i]);
+                quakeSystem.SetInput("Distance", inputs.Distances[i]);
+                quakeSystem.SetInput("Depth", inputs.Depths[i]);
+                quakeSystem.SetInput("Magnitude", inputs.Magnitudes[i]);
+                quakeSystem.SetInput("WeekConcentration", inputs.WeekConcentrations[i]);
+                quakeSystem.SetInput("MaxWeekMagnitude", inputs.MaxWeekMagnitudes[i]);
+                quakeSystem.SetInput("TwoWeeksConcentration", inputs.TwoWeeksConcentrations[i]);
+                quakeSystem.SetInput("MaxTwoWeeksMagnitude", inputs.MaxTwoWeeksMagnitudes[i]);
+                quakeSystem.SetInput("FiveYearsConcentration", inputs.FiveYearsConcentrations[i]);
+                quakeSystem.SetInput("MaxFiveYearsMagnitude", inputs.MaxFiveYearsMagnitudes[i]);
+                quakeSystem.SetInput("TenYearsConcentration", inputs.TenYearsConcentrations[i]);
+                quakeSystem.SetInput("MaxTenYearsMagnitude", inputs.MaxTenYearsMagnitudes[i]);
+                quakeSystem.SetInput("FiftyYearsConcentration", inputs.FiftyYearsConcentrations[i]);
+                quakeSystem.SetInput("MaxFiftyYearsMagnitude", inputs.MaxFiftyYearsMagnitudes[i]);
+                quakeSystem.SetInput("CenturyConcentration", inputs.CenturyConcentrations[i]);
+                quakeSystem.SetInput("MaxCenturyMagnitude", inputs.MaxCenturyMagnitudes[i]);
+            }
+        }
+
+        public float EvaluateSeismicity()
+        {
+            try
+            {
+                return quakeSystem.Evaluate("Seismicity");
+            }
+            catch
+            {
+                return -1;
+            }
+        }
+
+        public float EvaluateWeekSeismicity()
+        {
+            try
+            {
+                return quakeSystem.Evaluate("WeekSeismicity");
+            }
+            catch
+            {
+                return -1;
+            }
+        }
+
+        public float EvaluateMonthSeismicity()
+        {
+            try
+            {
+                return quakeSystem.Evaluate("MonthSeismicity");
+            }
+            catch
+            {
+                return -1;
+            }
+        }
+
+        public float EvaluateSixMonthsSeismicity()
+        {
+            try
+            {
+                return quakeSystem.Evaluate("SixMonthsSeismicity");
+            }
+            catch
+            {
+                return -1;
+            }
         }
 
         public void BuildInferenceSystem()
         {
+            #region Add linguistic variables
             // Input
             var lvDistance = GetDistanceVariable();
             var lvDate = GetDateVariable();
@@ -38,7 +190,7 @@ namespace FuzzyQuake.Lib
             var lvTwoWeeksConcentration = GetConcentrationVariable("TwoWeeksConcentration", StartDate.AddDays(-7), StartDate.AddDays(-14));
             var lvFiveYearsConcentration = GetConcentrationVariable("FiveYearsConcentration", StartDate.AddDays(-14), StartDate.AddYears(-5));
             var lvTenYearsConcentration = GetConcentrationVariable("TenYearsConcentration", StartDate.AddYears(-5), StartDate.AddYears(-10));
-            var lvFiftyYearsConcentration = GetConcentrationVariable("FiftyYearsConcentration ", StartDate.AddYears(-10), StartDate.AddYears(-50));
+            var lvFiftyYearsConcentration = GetConcentrationVariable("FiftyYearsConcentration", StartDate.AddYears(-10), StartDate.AddYears(-50));
             var lvCenturyConcentration = GetConcentrationVariable("CenturyConcentration", StartDate.AddYears(-50), StartDate.AddYears(-100));
 
             // Input Calculated maximum earthquake magnitude
@@ -72,11 +224,12 @@ namespace FuzzyQuake.Lib
             fuzzyDB.AddVariable(lvMaxTenYearsMagnitude);
             fuzzyDB.AddVariable(lvMaxFiftyYearsMagnitude);
             fuzzyDB.AddVariable(lvMaxCenturyMagnitude);
+            #endregion
 
             quakeSystem = new InferenceSystem(fuzzyDB, new CentroidDefuzzifier(1000));
 
+            #region Construct rules
             // Current seismicity rules
-
             string nearAndSoonClause = "(Distance is VeryNear OR Distance IS Near) AND (Date IS Week OR Date IS TwoWeeks)";
             string tooStrongMagnitudeClause = "(Magnitude IS Great OR Magnitude IS Major)";
             string strongMagnitudeClause = "Magnitude IS Strong";
@@ -184,6 +337,7 @@ namespace FuzzyQuake.Lib
                 "AND NOT (MaxFiftyYearsMagnitude IS Great AND MaxCenturyMagnitude IS Great OR " +
                      "MaxFiftyYearsMagnitude IS Major AND MaxCenturyMagnitude IS Major)" +
                      " THEN SixMonthsSeismicity IS Low");
+            #endregion
         }
 
         private LinguisticVariable GetConcentrationVariable(string period, DateTime dateFrom, DateTime dateTo)
