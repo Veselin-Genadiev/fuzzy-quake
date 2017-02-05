@@ -26,6 +26,11 @@
         </m:Map>
 
         <StackPanel Orientation="Vertical" Opacity="0.7" Grid.Row="1" HorizontalAlignment="Center">
+            <DatePicker x:Name="datePicker"
+                        SelectedDate="{Binding Date, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                        Foreground="Red"
+                        Background="Black" />
+            
             <Button x:Name="btnLoadCsv"
                     Margin="5"
                     Foreground="Yellow"

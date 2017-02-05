@@ -12,7 +12,9 @@ namespace FuzzyQuake.Lib
 {
     public class EarthQuakeInferenceSystem
     {
-        InferenceSystem quakeSystem;
+        private InferenceSystem quakeSystem;
+        private Inputs inputs;
+        private List<Rule> rules = new List<Rule>();
 
         public DateTime StartDate { get; set; }
 
@@ -39,11 +41,24 @@ namespace FuzzyQuake.Lib
         public void ProvideInput(string csvPath, float currentLatitude, float currentLongitude)
         {
             var lines = File.ReadAllLines(csvPath);
-            int n = lines.Count() - 1;
-            Inputs inputs = new Inputs(n);
             var currentCoordinate = new GeoCoordinate(currentLatitude, currentLongitude);
 
-            for (int i = 1; i < lines.Length; i++)
+            lines = lines.Skip(1).Where(line =>
+            {
+                var values = line.Split(',');
+                long time = DateTime.Parse(values[0]).Ticks;
+                float latitude = float.Parse(values[1]);
+                float longitude = float.Parse(values[2]);
+                var coordinate = new GeoCoordinate(latitude, longitude);
+
+                bool isDateRight = DateTime.Parse(values[0]) <= StartDate;
+                bool isNearOrFair = (float)currentCoordinate.GetDistanceTo(coordinate) / 1000 <= 40;
+                return isDateRight && isNearOrFair;
+            }).ToArray();
+
+            inputs = new Inputs(lines.Length);
+
+            for (int i = 0; i < lines.Length; i++)
             {
                 var line = lines[i];
                 var values = line.Split(',');
@@ -55,58 +70,85 @@ namespace FuzzyQuake.Lib
                 float depth = float.Parse(values[3]);
                 float magnitude = float.Parse(values[4]);
 
-                inputs.Times[i - 1] = time;
-                inputs.Distances[i - 1] = (float)currentCoordinate.GetDistanceTo(coordinate) / 1000;
-                inputs.Depths[i - 1] = depth;
-                inputs.Magnitudes[i - 1] = magnitude;
+                inputs.Times[i] = time;
+                inputs.Distances[i] = (float)currentCoordinate.GetDistanceTo(coordinate) / 1000;
+                inputs.Depths[i] = depth;
+                inputs.Magnitudes[i] = magnitude;
             }
 
-            for (int i = 0; i < n; i++)
+            for (int i = 0; i < lines.Length; i++)
             {
-                var magnitudes = inputs.Magnitudes.Where((d, index) => inputs.Distances[index] < 10)
-                    .SkipWhile((d, index) => inputs.Times[index] < StartDate.Ticks);
+                var weekMagnitudes = inputs.Magnitudes.Where((d, index) => inputs.Times[index] < StartDate.Ticks &&
+                    inputs.Times[index] > StartDate.AddDays(-7).Ticks);
 
-                var weekMagnitudes = magnitudes.TakeWhile((d, index) => inputs.Times[index] > StartDate.AddDays(-7).Ticks);
+                var weekDepths = inputs.Depths.Where((d, index) => inputs.Times[index] < StartDate.Ticks &&
+                    inputs.Times[index] > StartDate.AddDays(-7).Ticks);
+
                 inputs.WeekConcentrations[i] = weekMagnitudes.Count();
                 inputs.MaxWeekMagnitudes[i] = weekMagnitudes.Count() == 0 ? 0 : weekMagnitudes.Max();
+                inputs.MaxWeekDepths[i] = weekDepths.Count() == 0 ? 0 :
+                    weekDepths.ElementAt(weekMagnitudes.ToList().IndexOf(inputs.MaxWeekMagnitudes[i]));
 
-                magnitudes = magnitudes.SkipWhile((d, index) => inputs.Times[index] < StartDate.AddDays(-7).Ticks);
+                var twoWeekMagnitudes = inputs.Magnitudes.Where((d, index) => inputs.Times[index] < StartDate.AddDays(-7).Ticks &&
+                    inputs.Times[index] > StartDate.AddDays(-14).Ticks);
 
-                var twoWeekMagnitudes = magnitudes.TakeWhile((d, index) => inputs.Times[index] > StartDate.AddDays(-14).Ticks);
+                var twoWeekDepths = inputs.Depths.Where((d, index) => inputs.Times[index] < StartDate.AddDays(-7).Ticks &&
+                    inputs.Times[index] > StartDate.AddDays(-14).Ticks);
+
                 inputs.TwoWeeksConcentrations[i] = twoWeekMagnitudes.Count();
                 inputs.MaxTwoWeeksMagnitudes[i] = twoWeekMagnitudes.Count() == 0 ? 0 : twoWeekMagnitudes.Max();
+                inputs.MaxTwoWeeksDepths[i] = twoWeekDepths.Count() == 0 ? 0 :
+                    twoWeekDepths.ElementAt(twoWeekMagnitudes.ToList().IndexOf(inputs.MaxTwoWeeksMagnitudes[i]));
 
-                magnitudes = magnitudes.SkipWhile((d, index) => inputs.Times[index] < StartDate.AddDays(-14).Ticks);
+                var fiveYearMagnitudes = inputs.Magnitudes.Where((d, index) => inputs.Times[index] < StartDate.AddYears(-1).Ticks &&
+                    inputs.Times[index] > StartDate.AddYears(-5).Ticks);
 
-                var fiveYearMagnitudes = magnitudes.TakeWhile((d, index) => inputs.Times[index] > StartDate.AddYears(-1).Ticks);
+                var fiveYearDepths = inputs.Depths.Where((d, index) => inputs.Times[index] < StartDate.AddYears(-1).Ticks &&
+                    inputs.Times[index] > StartDate.AddYears(-5).Ticks);
+
                 inputs.FiveYearsConcentrations[i] = fiveYearMagnitudes.Count();
                 inputs.MaxFiveYearsMagnitudes[i] = fiveYearMagnitudes.Count() == 0 ? 0 : fiveYearMagnitudes.Max();
+                inputs.MaxFiveYearsDepths[i] = fiveYearDepths.Count() == 0 ? 0 :
+                    fiveYearDepths.ElementAt(fiveYearMagnitudes.ToList().IndexOf(inputs.MaxFiveYearsMagnitudes[i]));
 
-                magnitudes = magnitudes.SkipWhile((d, index) => inputs.Times[index] < StartDate.AddYears(-5).Ticks);
+                var tenYearMagnitudes = inputs.Magnitudes.Where((d, index) => inputs.Times[index] < StartDate.AddYears(-5).Ticks &&
+                    inputs.Times[index] > StartDate.AddYears(-10).Ticks);
 
-                var tenYearMagnitudes = magnitudes.TakeWhile((d, index) => inputs.Times[index] > StartDate.AddYears(-10).Ticks);
+                var tenYearDepths = inputs.Depths.Where((d, index) => inputs.Times[index] < StartDate.AddYears(-5).Ticks &&
+                    inputs.Times[index] > StartDate.AddYears(-10).Ticks);
+
                 inputs.TenYearsConcentrations[i] = tenYearMagnitudes.Count();
                 inputs.MaxTenYearsMagnitudes[i] = tenYearMagnitudes.Count() == 0 ? 0 : tenYearMagnitudes.Max();
+                inputs.MaxTenYearsDepths[i] = tenYearDepths.Count() == 0 ? 0 :
+                    tenYearDepths.ElementAt(tenYearMagnitudes.ToList().IndexOf(inputs.MaxTenYearsMagnitudes[i]));
 
-                magnitudes = magnitudes.SkipWhile((d, index) => inputs.Times[index] < StartDate.AddYears(-10).Ticks);
+                var fiftyYearMagnitudes = inputs.Magnitudes.Where((d, index) => inputs.Times[index] < StartDate.AddYears(-10).Ticks &&
+                    inputs.Times[index] > StartDate.AddYears(-50).Ticks);
 
-                var fiftyYearMagnitudes = magnitudes.TakeWhile((d, index) => inputs.Times[index] > StartDate.AddYears(-50).Ticks);
+                var fiftyYearDepths = inputs.Depths.Where((d, index) => inputs.Times[index] < StartDate.AddYears(-10).Ticks &&
+                    inputs.Times[index] > StartDate.AddYears(-50).Ticks);
+
                 inputs.FiftyYearsConcentrations[i] = fiftyYearMagnitudes.Count();
                 inputs.MaxFiftyYearsMagnitudes[i] = fiftyYearMagnitudes.Count() == 0 ? 0 : fiftyYearMagnitudes.Max();
+                inputs.MaxFiftyYearsDepths[i] = fiftyYearDepths.Count() == 0 ? 0 :
+                    fiftyYearDepths.ElementAt(fiftyYearMagnitudes.ToList().IndexOf(inputs.MaxFiftyYearsMagnitudes[i]));
 
-                magnitudes = magnitudes.SkipWhile((d, index) => inputs.Times[index] < StartDate.AddYears(-50).Ticks);
+                var centuryMagnitudes = inputs.Magnitudes.Where((d, index) => inputs.Times[index] < StartDate.AddYears(-50).Ticks &&
+                    inputs.Times[index] > StartDate.AddYears(-100).Ticks);
 
-                var centuryMagnitudes = magnitudes.TakeWhile((d, index) => inputs.Times[index] > StartDate.AddYears(-100).Ticks);
+                var centuryDepths = inputs.Depths.Where((d, index) => inputs.Times[index] < StartDate.AddYears(-50).Ticks &&
+                    inputs.Times[index] > StartDate.AddYears(-100).Ticks);
+
                 inputs.CenturyConcentrations[i] = centuryMagnitudes.Count();
                 inputs.MaxCenturyMagnitudes[i] = centuryMagnitudes.Count() == 0 ? 0 : centuryMagnitudes.Max();
+                inputs.MaxCenturyDepths[i] = centuryDepths.Count() == 0 ? 0 :
+                    centuryDepths.ElementAt(centuryMagnitudes.ToList().IndexOf(inputs.MaxCenturyMagnitudes[i]));
             }
 
-            for (int i = 0; i < n; i++)
+            for (int i = 0; i < lines.Length; i++)
             {
                 quakeSystem.SetInput("Date", inputs.Times[i]);
                 quakeSystem.SetInput("Distance", inputs.Distances[i]);
-                quakeSystem.SetInput("Depth", inputs.Depths[i]);
-                quakeSystem.SetInput("Magnitude", inputs.Magnitudes[i]);
                 quakeSystem.SetInput("WeekConcentration", inputs.WeekConcentrations[i]);
                 quakeSystem.SetInput("MaxWeekMagnitude", inputs.MaxWeekMagnitudes[i]);
                 quakeSystem.SetInput("TwoWeeksConcentration", inputs.TwoWeeksConcentrations[i]);
@@ -119,6 +161,12 @@ namespace FuzzyQuake.Lib
                 quakeSystem.SetInput("MaxFiftyYearsMagnitude", inputs.MaxFiftyYearsMagnitudes[i]);
                 quakeSystem.SetInput("CenturyConcentration", inputs.CenturyConcentrations[i]);
                 quakeSystem.SetInput("MaxCenturyMagnitude", inputs.MaxCenturyMagnitudes[i]);
+                quakeSystem.SetInput("MaxWeekDepth", inputs.MaxWeekDepths[i]);
+                quakeSystem.SetInput("MaxTwoWeeksDepth", inputs.MaxTwoWeeksDepths[i]);
+                quakeSystem.SetInput("MaxFiveYearsDepth", inputs.MaxFiveYearsDepths[i]);
+                quakeSystem.SetInput("MaxTenYearsDepth", inputs.MaxTenYearsDepths[i]);
+                quakeSystem.SetInput("MaxFiftyYearsDepth", inputs.MaxFiftyYearsDepths[i]);
+                quakeSystem.SetInput("MaxCenturyDepth", inputs.MaxCenturyDepths[i]);
             }
         }
 
@@ -126,7 +174,7 @@ namespace FuzzyQuake.Lib
         {
             try
             {
-                return GetOutput(quakeSystem.ExecuteInference("Seismicity"));
+                return GetSeismicityLabel(quakeSystem.Evaluate("Seismicity"));
             }
             catch
             {
@@ -138,7 +186,7 @@ namespace FuzzyQuake.Lib
         {
             try
             {
-                return GetOutput(quakeSystem.ExecuteInference("WeekSeismicity"));
+                return GetSeismicityLabel(quakeSystem.Evaluate("WeekSeismicity"));
             }
             catch
             {
@@ -150,8 +198,7 @@ namespace FuzzyQuake.Lib
         {
             try
             {
-                var a = quakeSystem.Evaluate("MonthSeismicity");
-                return GetOutput(quakeSystem.ExecuteInference("MonthSeismicity"));
+                return GetSeismicityLabel(quakeSystem.Evaluate("MonthSeismicity"));
             }
             catch
             {
@@ -163,7 +210,7 @@ namespace FuzzyQuake.Lib
         {
             try
             {
-                return GetOutput(quakeSystem.ExecuteInference("SixMonthsSeismicity"));
+                return GetSeismicityLabel(quakeSystem.Evaluate("SixMonthsSeismicity"));
             }
             catch
             {
@@ -171,9 +218,24 @@ namespace FuzzyQuake.Lib
             }
         }
 
-        private string GetOutput(FuzzyOutput output)
+        private string GetSeismicityLabel(float output)
         {
-            return string.Join("\t", output.OutputList.Select(l => l.Label + ": " + l.FiringStrength));
+            if (output < 4)
+            {
+                return "Low";
+            }
+            else if (output < 6)
+            {
+                return "Medium";
+            }
+            else if (output < 9)
+            {
+                return "Strong";
+            }
+            else
+            {
+                return "Great";
+            }
         }
 
         private void BuildInferenceSystem()
@@ -182,8 +244,6 @@ namespace FuzzyQuake.Lib
             // Input
             var lvDistance = GetDistanceVariable();
             var lvDate = GetDateVariable();
-            var lvMagnitude = GetMagnitudeVariable("Magnitude");
-            var lvDepth = GetDepthVariable();
 
             // Output
             var lvSeismicEnv = GetSeismicityVariable("Seismicity");
@@ -207,11 +267,17 @@ namespace FuzzyQuake.Lib
             var lvMaxFiftyYearsMagnitude = GetMagnitudeVariable("MaxFiftyYearsMagnitude");
             var lvMaxCenturyMagnitude = GetMagnitudeVariable("MaxCenturyMagnitude");
 
+            // Input Calculated biggest earthquake depth
+            var lvMaxWeekDepth = GetDepthVariable("MaxWeekDepth");
+            var lvMaxTwoWeeksDepth = GetDepthVariable("MaxTwoWeeksDepth");
+            var lvMaxFiveYearsDepth = GetDepthVariable("MaxFiveYearsDepth");
+            var lvMaxTenYearsDepth = GetDepthVariable("MaxTenYearsDepth");
+            var lvMaxFiftyYearsDepth = GetDepthVariable("MaxFiftyYearsDepth");
+            var lvMaxCenturyDepth = GetDepthVariable("MaxCenturyDepth");
+
             Database fuzzyDB = new Database();
             fuzzyDB.AddVariable(lvDistance);
             fuzzyDB.AddVariable(lvDate);
-            fuzzyDB.AddVariable(lvMagnitude);
-            fuzzyDB.AddVariable(lvDepth);
             fuzzyDB.AddVariable(lvSeismicEnv);
             fuzzyDB.AddVariable(lvWeekSeismicEnv);
             fuzzyDB.AddVariable(lvMonthSeismicEnv);
@@ -230,119 +296,126 @@ namespace FuzzyQuake.Lib
             fuzzyDB.AddVariable(lvMaxTenYearsMagnitude);
             fuzzyDB.AddVariable(lvMaxFiftyYearsMagnitude);
             fuzzyDB.AddVariable(lvMaxCenturyMagnitude);
+
+            fuzzyDB.AddVariable(lvMaxWeekDepth);
+            fuzzyDB.AddVariable(lvMaxTwoWeeksDepth);
+            fuzzyDB.AddVariable(lvMaxFiveYearsDepth);
+            fuzzyDB.AddVariable(lvMaxTenYearsDepth);
+            fuzzyDB.AddVariable(lvMaxFiftyYearsDepth);
+            fuzzyDB.AddVariable(lvMaxCenturyDepth);
             #endregion
 
             quakeSystem = new InferenceSystem(fuzzyDB, new CentroidDefuzzifier(1000));
 
             #region Construct rules
             // Current seismicity rules
-            string nearAndSoonClause = "(Distance is VeryNear OR Distance IS Near) AND (Date IS Week OR Date IS TwoWeeks)";
-            string tooStrongMagnitudeClause = "(Magnitude IS Great OR Magnitude IS Major)";
-            string strongMagnitudeClause = "Magnitude IS Strong";
-            string moderateMagnitudeClause = "Magnitude IS Moderate";
-            string lightMagnitudeClause = "Magnitude IS Light";
-            string belowLightMagnitudeClause = "(Magnitude IS Light OR Magnitude IS Minor OR Magnitude IS Micro)";
-            string shallowDepthClause = "Depth IS Shallow";
-            string notShallowDepthClause = "Depth IS NOT Shallow";
-            string fairlyDeepClause = "(Depth IS Fairly OR Depth is Deep)";
-            string veryDeepClause = "Depth IS VeryDeep";
+            string nearAndSoonClause = "Distance IS Near AND (Date IS Week OR Date IS TwoWeeks)";
+            string tooStrongMagnitudeClause = "(MaxWeekMagnitude IS Great OR MaxWeekMagnitude IS Major)";
+            string strongMagnitudeClause = "MaxWeekMagnitude IS Strong";
+            string moderateMagnitudeClause = "MaxWeekMagnitude IS Moderate";
+            string lightMagnitudeClause = "MaxWeekMagnitude IS Light";
+            string belowLightMagnitudeClause = "(MaxWeekMagnitude IS Light OR MaxWeekMagnitude IS Minor OR MaxWeekMagnitude IS Micro)";
+            string shallowDepthClause = "MaxWeekDepth IS Shallow";
+            string notShallowDepthClause = "MaxWeekDepth IS NOT Shallow";
+            string fairlyDeepClause = "(MaxWeekDepth IS Fairly OR MaxWeekDepth is Deep)";
+            string veryDeepClause = "MaxWeekDepth IS VeryDeep";
 
             // near events
-            quakeSystem.NewRule("Rule 1", "IF " + nearAndSoonClause +
-                " AND " + tooStrongMagnitudeClause + " THEN Seismicity IS Great");
+            rules.Add(quakeSystem.NewRule("Rule 1", "IF " + nearAndSoonClause +
+                " AND " + tooStrongMagnitudeClause + " THEN Seismicity IS Great"));
 
-            quakeSystem.NewRule("Rule 2", "IF " + nearAndSoonClause +
-                " AND "+ strongMagnitudeClause + " AND " + shallowDepthClause + " THEN Seismicity is Great");
+            rules.Add(quakeSystem.NewRule("Rule 2", "IF " + nearAndSoonClause +
+                " AND "+ strongMagnitudeClause + " AND " + shallowDepthClause + " THEN Seismicity is Great"));
 
-            quakeSystem.NewRule("Rule 3", "IF " + nearAndSoonClause +
-                " AND " + strongMagnitudeClause + " AND " + fairlyDeepClause + " THEN Seismicity is Strong");
+            rules.Add(quakeSystem.NewRule("Rule 3", "IF " + nearAndSoonClause +
+                " AND " + strongMagnitudeClause + " AND " + fairlyDeepClause + " THEN Seismicity is Strong"));
 
-            quakeSystem.NewRule("Rule 4", "IF " + nearAndSoonClause +
-                " AND " + strongMagnitudeClause + " AND " + veryDeepClause + " THEN Seismicity is Medium");
+            rules.Add(quakeSystem.NewRule("Rule 4", "IF " + nearAndSoonClause +
+                " AND " + strongMagnitudeClause + " AND " + veryDeepClause + " THEN Seismicity is Strong"));
 
-            quakeSystem.NewRule("Rule 5", "IF " + nearAndSoonClause +
-                " AND " + moderateMagnitudeClause + " AND " + shallowDepthClause + " THEN Seismicity is Strong");
+            rules.Add(quakeSystem.NewRule("Rule 5", "IF " + nearAndSoonClause +
+                " AND " + moderateMagnitudeClause + " AND " + shallowDepthClause + " THEN Seismicity is Strong"));
 
-            quakeSystem.NewRule("Rule 6", "IF " + nearAndSoonClause +
-                " AND " + moderateMagnitudeClause + " AND "+ notShallowDepthClause + " THEN Seismicity is Medium");
+            rules.Add(quakeSystem.NewRule("Rule 6", "IF " + nearAndSoonClause +
+                " AND " + moderateMagnitudeClause + " AND "+ notShallowDepthClause + " THEN Seismicity is Medium"));
 
-            quakeSystem.NewRule("Rule 7", "IF " + nearAndSoonClause +
-                " AND " + lightMagnitudeClause + " AND " + shallowDepthClause + " THEN Seismicity is Medium");
+            rules.Add(quakeSystem.NewRule("Rule 7", "IF " + nearAndSoonClause +
+                " AND " + lightMagnitudeClause + " AND " + shallowDepthClause + " THEN Seismicity is Medium"));
 
-            quakeSystem.NewRule("Rule 8", "IF " + nearAndSoonClause +
-                " AND " + belowLightMagnitudeClause + " AND " + notShallowDepthClause + " THEN Seismicity is Low");
+            rules.Add(quakeSystem.NewRule("Rule 8", "IF " + nearAndSoonClause +
+                " AND " + belowLightMagnitudeClause + " AND " + notShallowDepthClause + " THEN Seismicity is Low"));
 
             // far events
-            string farAndSoonClause = "(Distance IS Fair OR Distance IS Far) AND (Date IS Week OR Date IS TwoWeeks)";
-            quakeSystem.NewRule("Rule 9", "IF " + farAndSoonClause + " AND " +
-                tooStrongMagnitudeClause + " THEN Seismicity IS Strong");
+            string fairAndSoonClause = "Distance IS Fair AND (Date IS Week OR Date is TwoWeeks)";
+            rules.Add(quakeSystem.NewRule("Rule 9", "IF " + fairAndSoonClause + " AND " +
+                tooStrongMagnitudeClause + " THEN Seismicity IS Great"));
 
-            quakeSystem.NewRule("Rule 10", "IF " + farAndSoonClause + " AND " + strongMagnitudeClause +
-                " AND " + shallowDepthClause + " THEN Seismicity IS Strong");
+            rules.Add(quakeSystem.NewRule("Rule 10", "IF " + fairAndSoonClause + " AND " + strongMagnitudeClause +
+                " AND " + shallowDepthClause + " THEN Seismicity IS Strong"));
 
-            quakeSystem.NewRule("Rule 11", "IF " + farAndSoonClause + " AND " + strongMagnitudeClause +
-                " AND " + fairlyDeepClause + " THEN Seismicity IS Medium");
+            rules.Add(quakeSystem.NewRule("Rule 11", "IF " + fairAndSoonClause + " AND " + strongMagnitudeClause +
+                " AND " + fairlyDeepClause + " THEN Seismicity IS Strong"));
 
-            quakeSystem.NewRule("Rule 12", "IF " + farAndSoonClause + " AND " + strongMagnitudeClause +
-                " AND " + veryDeepClause + " THEN Seismicity IS Low");
+            rules.Add(quakeSystem.NewRule("Rule 12", "IF " + fairAndSoonClause + " AND " + strongMagnitudeClause +
+                " AND " + veryDeepClause + " THEN Seismicity IS Medium"));
 
-            quakeSystem.NewRule("Rule 13", "IF " + farAndSoonClause + " AND " + moderateMagnitudeClause +
-                " AND " + shallowDepthClause + " THEN Seismicity IS Medium");
+            rules.Add(quakeSystem.NewRule("Rule 13", "IF " + fairAndSoonClause + " AND " + moderateMagnitudeClause +
+                " AND " + shallowDepthClause + " THEN Seismicity IS Medium"));
 
-            quakeSystem.NewRule("Rule 14", "IF " + farAndSoonClause + " AND " + moderateMagnitudeClause +
-                " AND " + notShallowDepthClause + " THEN Seismicity IS Low");
+            rules.Add(quakeSystem.NewRule("Rule 14", "IF " + fairAndSoonClause + " AND " + moderateMagnitudeClause +
+                " AND " + notShallowDepthClause + " THEN Seismicity IS Low"));
 
-            quakeSystem.NewRule("Rule 15", "IF " + farAndSoonClause + " AND " +
+            rules.Add(quakeSystem.NewRule("Rule 15", "IF " + fairAndSoonClause + " AND " +
                 "(" + lightMagnitudeClause + " OR " + belowLightMagnitudeClause + ")" +
-                " THEN Seismicity IS Low");
-
-            // very far events
-            quakeSystem.NewRule("Rule 16", "IF Distance IS VeryFar AND (Date IS Week OR Date IS TwoWeeks) THEN Seismicity IS Low");
+                " THEN Seismicity IS Low"));
 
             // Predict next week - subsiding
-            string soonClause = "Date IS Week OR Date IS TwoWeeks";
-
-            quakeSystem.NewRule("Rule 17", "IF " + soonClause + " AND (WeekConcentration IS Big OR TwoWeeksConcentration IS Big) " +
+            string soonClause = "(Date IS Week OR Date IS TwoWeeks)";
+            rules.Add(quakeSystem.NewRule("Rule 16", "IF " + soonClause + " AND (WeekConcentration IS Big OR TwoWeeksConcentration IS Big) " +
                 "AND (MaxWeekMagnitude IS Great OR MaxTwoWeeksMagnitude IS Great OR " +
                      "MaxWeekMagnitude IS Major OR MaxTwoWeeksMagnitude IS Major)" +
-                     " THEN WeekSeismicity IS Strong");
+                     " THEN WeekSeismicity IS Strong"));
 
-            quakeSystem.NewRule("Rule 18", "IF " + soonClause + " AND (WeekConcentration IS Big OR TwoWeeksConcentration IS Big) " +
+            rules.Add(quakeSystem.NewRule("Rule 17", "IF " + soonClause + " AND (WeekConcentration IS Big OR TwoWeeksConcentration IS Big) " +
                 "AND (MaxWeekMagnitude IS Strong OR MaxTwoWeeksMagnitude IS Strong OR " +
                      "MaxWeekMagnitude IS Moderate OR MaxTwoWeeksMagnitude IS Moderate)" +
-                     " THEN WeekSeismicity IS Medium");
+                     " THEN WeekSeismicity IS Medium"));
 
-            quakeSystem.NewRule("Rule 19", "IF " + soonClause + " AND (WeekConcentration IS Big OR TwoWeeksConcentration IS Big) " +
+            rules.Add(quakeSystem.NewRule("Rule 18", "IF " + soonClause + " AND (WeekConcentration IS Big OR TwoWeeksConcentration IS Big) " +
                 "AND (MaxWeekMagnitude IS Light OR MaxTwoWeeksMagnitude IS Light OR " +
                      "MaxWeekMagnitude IS Minor OR MaxTwoWeeksMagnitude IS Minor OR " +
                      "MaxWeekMagnitude IS Micro OR MaxTwoWeeksMagnitude IS Micro)" +
-                     " THEN WeekSeismicity IS Low");
+                     " THEN WeekSeismicity IS Low"));
 
             // Predict next month - next wave Strong or Medium
-            quakeSystem.NewRule("Rule 20", "IF " + soonClause + " AND FiveYearsConcentration IS Medium AND TenYearsConcentration IS Medium " +
+            string upToMonthClause = "(Date IS Week OR Date IS TwoWeeks OR Date IS Month)";
+            rules.Add(quakeSystem.NewRule("Rule 19", "IF " + upToMonthClause + " AND FiveYearsConcentration IS Medium AND TenYearsConcentration IS Medium " +
                 "AND (MaxFiveYearsMagnitude IS Strong AND MaxTenYearsMagnitude IS Strong OR " +
                      "MaxFiveYearsMagnitude IS Moderate AND MaxTenYearsMagnitude IS Moderate)" +
-                     " THEN MonthSeismicity IS Strong");
+                     " THEN MonthSeismicity IS Strong"));
 
-            quakeSystem.NewRule("Rule 21", "IF " + soonClause + " AND FiveYearsConcentration IS Medium AND TenYearsConcentration IS Medium " +
+            rules.Add(quakeSystem.NewRule("Rule 20", "IF " + upToMonthClause + " AND FiveYearsConcentration IS Medium AND TenYearsConcentration IS Medium " +
                 "AND MaxFiveYearsMagnitude IS Light AND MaxTenYearsMagnitude IS Light" +
-                     " THEN MonthSeismicity IS Medium");
+                     " THEN MonthSeismicity IS Medium"));
 
-            quakeSystem.NewRule("Rule 22", "IF " + soonClause + " AND FiveYearsConcentration IS Medium AND TenYearsConcentration IS Medium " +
+            rules.Add(quakeSystem.NewRule("Rule 21", "IF " + upToMonthClause + " AND FiveYearsConcentration IS Medium AND TenYearsConcentration IS Medium " +
                 "AND (MaxFiveYearsMagnitude IS Minor OR MaxFiveYearsMagnitude IS Micro) AND " +
                     "(MaxTenYearsMagnitude IS Minor OR MaxTenYearsMagnitude IS Micro)" +
-                     " THEN MonthSeismicity IS Low");
+                     " THEN MonthSeismicity IS Low"));
 
             // Predict next 6 months
-            quakeSystem.NewRule("Rule 23", "IF " + soonClause + " AND FiftyYearsConcentration IS Small AND CenturyConcentration IS Small " +
+            string upToYearClause = "(Date IS Week OR Date IS TwoWeeks OR Date IS Month OR " +
+                "Date IS ThreeMonths OR Date IS SixMonths OR Date IS Year)";
+
+            rules.Add(quakeSystem.NewRule("Rule 22", "IF " + upToYearClause + " AND FiftyYearsConcentration IS Small AND CenturyConcentration IS Small " +
                 "AND (MaxFiftyYearsMagnitude IS Great AND MaxCenturyMagnitude IS Great OR " +
                      "MaxFiftyYearsMagnitude IS Major AND MaxCenturyMagnitude IS Major)" +
-                     " THEN SixMonthsSeismicity IS Great");
+                     " THEN SixMonthsSeismicity IS Great"));
 
-            quakeSystem.NewRule("Rule 24", "IF " + soonClause +
+            rules.Add(quakeSystem.NewRule("Rule 23", "IF " + upToYearClause +
                 " AND NOT (MaxFiftyYearsMagnitude IS Great AND MaxCenturyMagnitude IS Great OR " +
                           "MaxFiftyYearsMagnitude IS Major AND MaxCenturyMagnitude IS Major)" +
-                     " THEN SixMonthsSeismicity IS Low");
+                     " THEN SixMonthsSeismicity IS Low"));
             #endregion
         }
 
@@ -370,18 +443,12 @@ namespace FuzzyQuake.Lib
 
         private LinguisticVariable GetDistanceVariable()
         {
-            FuzzySet distanceVeryNear = new FuzzySet("VeryNear", new TrapezoidalFunction(0, 0, 10));
-            FuzzySet distanceNear = new FuzzySet("Near", new TrapezoidalFunction(8, 14, 20));
-            FuzzySet distanceFair = new FuzzySet("Fair", new TrapezoidalFunction(12, 18, 24));
-            FuzzySet distanceFar = new FuzzySet("Far", new TrapezoidalFunction(18, 24, 30));
-            FuzzySet distanceVeryFar = new FuzzySet("VeryFar", new TrapezoidalFunction(30, 30, float.MaxValue));
+            FuzzySet distanceNear = new FuzzySet("Near", new TrapezoidalFunction(0, 0, 15, 22));
+            FuzzySet distanceFair = new FuzzySet("Fair", new TrapezoidalFunction(20, 30, 40));
 
-            LinguisticVariable lvDistance = new LinguisticVariable("Distance", 0, float.MaxValue);
-            lvDistance.AddLabel(distanceVeryNear);
+            LinguisticVariable lvDistance = new LinguisticVariable("Distance", 0, 80);
             lvDistance.AddLabel(distanceNear);
             lvDistance.AddLabel(distanceFair);
-            lvDistance.AddLabel(distanceFar);
-            lvDistance.AddLabel(distanceVeryFar);
 
             return lvDistance;
         }
@@ -454,14 +521,14 @@ namespace FuzzyQuake.Lib
             return lvMagnitude;
         }
 
-        private LinguisticVariable GetDepthVariable()
+        private LinguisticVariable GetDepthVariable(string depthType)
         {
             FuzzySet shallowDepth = new FuzzySet("Shallow", new TrapezoidalFunction(0, 0, 10, 10.5f));
             FuzzySet fairlyDepth = new FuzzySet("Fairly", new TrapezoidalFunction(9.5f, 10, 20, 20.5f));
             FuzzySet deepDepth = new FuzzySet("Deep", new TrapezoidalFunction(19.5f, 20, 40, 40.5f));
             FuzzySet veryDeepDepth = new FuzzySet("VeryDeep", new TrapezoidalFunction(39.5f, 40, float.MaxValue, float.MaxValue));
 
-            LinguisticVariable lvDepth = new LinguisticVariable("Depth", 0, float.MaxValue);
+            LinguisticVariable lvDepth = new LinguisticVariable(depthType, 0, float.MaxValue);
 
             lvDepth.AddLabel(shallowDepth);
             lvDepth.AddLabel(fairlyDepth);

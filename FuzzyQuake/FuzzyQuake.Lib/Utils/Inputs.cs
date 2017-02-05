@@ -10,6 +10,7 @@ namespace FuzzyQuake.Lib.Utils
     {
         public Inputs(int n)
         {
+            // Input
             this.Times = new long[n];
             this.Distances = new float[n];
             this.Depths = new float[n];
@@ -26,8 +27,15 @@ namespace FuzzyQuake.Lib.Utils
             this.MaxFiftyYearsMagnitudes = new float[n];
             this.CenturyConcentrations = new float[n];
             this.MaxCenturyMagnitudes = new float[n];
+            this.MaxWeekDepths = new float[n];
+            this.MaxTwoWeeksDepths = new float[n];
+            this.MaxFiveYearsDepths = new float[n];
+            this.MaxTenYearsDepths = new float[n];
+            this.MaxFiftyYearsDepths = new float[n];
+            this.MaxCenturyDepths = new float[n];
         }
 
+        // Input
         public long[] Times { get; set; }
 
         public float[] Distances { get; set; }
@@ -59,5 +67,17 @@ namespace FuzzyQuake.Lib.Utils
         public float[] CenturyConcentrations { get; set; }
 
         public float[] MaxCenturyMagnitudes { get; set; }
+
+        public float[] MaxWeekDepths { get; set; }
+
+        public float[] MaxTwoWeeksDepths { get; set; }
+
+        public float[] MaxFiveYearsDepths { get; set; }
+
+        public float[] MaxTenYearsDepths { get; set; }
+
+        public float[] MaxFiftyYearsDepths { get; set; }
+
+        public float[] MaxCenturyDepths { get; set; }
     }
 }

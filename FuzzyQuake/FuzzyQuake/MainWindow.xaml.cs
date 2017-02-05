@@ -24,12 +24,14 @@ namespace FuzzyQuake
     public partial class MainWindow : Window
     {
         private VM viewModel = new VM();
-        private EarthQuakeInferenceSystem quakeSystem = new EarthQuakeInferenceSystem();
+        private EarthQuakeInferenceSystem quakeSystem;
 
         public MainWindow()
         {
             InitializeComponent();
             this.DataContext = viewModel;
+            viewModel.Latitude = (float)myPushPin.Location.Latitude;
+            viewModel.Longitude = (float)myPushPin.Location.Longitude;
         }
 
         private void myMap_MouseDoubleClick(object sender, MouseButtonEventArgs e)
@@ -52,15 +54,9 @@ namespace FuzzyQuake
             dlg.DefaultExt = ".csv";
             dlg.Filter = "csv files (*.csv)|*.csv|excel files (*.xls,*.xlsx)|*.xls*";
 
-
-            // Display OpenFileDialog by calling ShowDialog method 
             Nullable<bool> result = dlg.ShowDialog();
-
-
-            // Get the selected file name and display in a TextBox 
             if (result.HasValue && result.Value)
             {
-                // Open document 
                 string filename = dlg.FileName;
                 viewModel.CSVPath = filename;
             }
@@ -70,6 +66,7 @@ namespace FuzzyQuake
         {
             if (!string.IsNullOrEmpty(viewModel.CSVPath))
             {
+                quakeSystem = new EarthQuakeInferenceSystem(viewModel.Date);
                 quakeSystem.ProvideInput(viewModel.CSVPath, viewModel.Latitude, viewModel.Longitude);
                 viewModel.CurrentSeismicity = "Current seismicity: " + quakeSystem.EvaluateSeismicity();
                 viewModel.WeekSeismicity = "Week seismicity: " + quakeSystem.EvaluateWeekSeismicity();
