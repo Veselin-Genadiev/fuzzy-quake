@@ -38,10 +38,11 @@ namespace FuzzyQuake.Lib
         /// mag
         /// </summary>
         /// <param name="csvPath"></param>
-        public void ProvideInput(string csvPath, float currentLatitude, float currentLongitude)
+        public void ProvideInput(string csvPath, float latitudeStart, float longitudeStart, float latitudeEnd, float longitudeEnd)
         {
             var lines = File.ReadAllLines(csvPath);
-            var currentCoordinate = new GeoCoordinate(currentLatitude, currentLongitude);
+            var startCoordinate = new GeoCoordinate(latitudeStart, longitudeStart);
+            var endCoordinate = new GeoCoordinate(latitudeEnd, longitudeEnd);
 
             lines = lines.Skip(1).Where(line =>
             {
@@ -52,7 +53,7 @@ namespace FuzzyQuake.Lib
                 var coordinate = new GeoCoordinate(latitude, longitude);
 
                 bool isDateRight = DateTime.Parse(values[0]) <= StartDate;
-                bool isNearOrFair = (float)currentCoordinate.GetDistanceTo(coordinate) / 1000 <= 40;
+                bool isNearOrFair = (float)coordinate.MinDistanceToRectangle(startCoordinate, endCoordinate) / 1000 <= 40;
                 return isDateRight && isNearOrFair;
             }).ToArray();
 
@@ -71,7 +72,7 @@ namespace FuzzyQuake.Lib
                 float magnitude = float.Parse(values[4]);
 
                 inputs.Times[i] = time;
-                inputs.Distances[i] = (float)currentCoordinate.GetDistanceTo(coordinate) / 1000;
+                inputs.Distances[i] = (float)coordinate.MinDistanceToRectangle(startCoordinate, endCoordinate) / 1000;
                 inputs.Depths[i] = depth;
                 inputs.Magnitudes[i] = magnitude;
             }
@@ -178,7 +179,7 @@ namespace FuzzyQuake.Lib
             }
             catch
             {
-                return string.Empty;
+                return "Low";
             }
         }
 
@@ -190,7 +191,7 @@ namespace FuzzyQuake.Lib
             }
             catch
             {
-                return string.Empty;
+                return "Low";
             }
         }
 
@@ -202,19 +203,7 @@ namespace FuzzyQuake.Lib
             }
             catch
             {
-                return string.Empty;
-            }
-        }
-
-        public string EvaluateSixMonthsSeismicity()
-        {
-            try
-            {
-                return GetSeismicityLabel(quakeSystem.Evaluate("SixMonthsSeismicity"));
-            }
-            catch
-            {
-                return string.Empty;
+                return "Low";
             }
         }
 
@@ -249,7 +238,6 @@ namespace FuzzyQuake.Lib
             var lvSeismicEnv = GetSeismicityVariable("Seismicity");
             var lvWeekSeismicEnv = GetSeismicityVariable("WeekSeismicity");
             var lvMonthSeismicEnv = GetSeismicityVariable("MonthSeismicity");
-            var lvSixMonthsSeismicEnv = GetSeismicityVariable("SixMonthsSeismicity");
 
             // Input Calculated average earthquake concetration (near only)
             var lvWeekConcentration = GetConcentrationVariable("WeekConcentration", StartDate.AddDays(-7), StartDate);
@@ -281,7 +269,6 @@ namespace FuzzyQuake.Lib
             fuzzyDB.AddVariable(lvSeismicEnv);
             fuzzyDB.AddVariable(lvWeekSeismicEnv);
             fuzzyDB.AddVariable(lvMonthSeismicEnv);
-            fuzzyDB.AddVariable(lvSixMonthsSeismicEnv);
 
             fuzzyDB.AddVariable(lvWeekConcentration);
             fuzzyDB.AddVariable(lvTwoWeeksConcentration);
@@ -305,7 +292,7 @@ namespace FuzzyQuake.Lib
             fuzzyDB.AddVariable(lvMaxCenturyDepth);
             #endregion
 
-            quakeSystem = new InferenceSystem(fuzzyDB, new CentroidDefuzzifier(1000));
+            quakeSystem = new InferenceSystem(fuzzyDB, new CentroidDefuzzifier(1000), new MinimumNorm(), new MaximumCoNorm());
 
             #region Construct rules
             // Current seismicity rules
@@ -387,7 +374,7 @@ namespace FuzzyQuake.Lib
                      "MaxWeekMagnitude IS Micro OR MaxTwoWeeksMagnitude IS Micro)" +
                      " THEN WeekSeismicity IS Low"));
 
-            // Predict next month - next wave Strong or Medium
+            // Predict next month
             string upToMonthClause = "(Date IS Week OR Date IS TwoWeeks OR Date IS Month)";
             rules.Add(quakeSystem.NewRule("Rule 19", "IF " + upToMonthClause + " AND FiveYearsConcentration IS Medium AND TenYearsConcentration IS Medium " +
                 "AND (MaxFiveYearsMagnitude IS Strong AND MaxTenYearsMagnitude IS Strong OR " +
@@ -403,19 +390,18 @@ namespace FuzzyQuake.Lib
                     "(MaxTenYearsMagnitude IS Minor OR MaxTenYearsMagnitude IS Micro)" +
                      " THEN MonthSeismicity IS Low"));
 
-            // Predict next 6 months
             string upToYearClause = "(Date IS Week OR Date IS TwoWeeks OR Date IS Month OR " +
                 "Date IS ThreeMonths OR Date IS SixMonths OR Date IS Year)";
 
             rules.Add(quakeSystem.NewRule("Rule 22", "IF " + upToYearClause + " AND FiftyYearsConcentration IS Small AND CenturyConcentration IS Small " +
                 "AND (MaxFiftyYearsMagnitude IS Great AND MaxCenturyMagnitude IS Great OR " +
                      "MaxFiftyYearsMagnitude IS Major AND MaxCenturyMagnitude IS Major)" +
-                     " THEN SixMonthsSeismicity IS Great"));
+                     " THEN MonthSeismicity IS Great"));
 
             rules.Add(quakeSystem.NewRule("Rule 23", "IF " + upToYearClause +
                 " AND NOT (MaxFiftyYearsMagnitude IS Great AND MaxCenturyMagnitude IS Great OR " +
                           "MaxFiftyYearsMagnitude IS Major AND MaxCenturyMagnitude IS Major)" +
-                     " THEN SixMonthsSeismicity IS Low"));
+                     " THEN MonthSeismicity IS Low"));
             #endregion
         }
 

@@ -19,12 +19,16 @@
                CredentialsProvider="ApQnl7S_Fl5aDXs2f_Gcu4aZqONdslq8zQh8bY4ehguvsxP7KKOJva13A5BNsUG3"
                Center="42.696552, 23.32601"
                ZoomLevel="6"
-               MouseDoubleClick="myMap_MouseDoubleClick"
                >
-            <m:Pushpin x:Name="myPushPin"
-                       Location="42.696552, 23.32601"/>
+            <m:MapPolygon x:Name="mapPolygon"
+                             Fill="Transparent"
+                             Stroke="Red"
+                             StrokeThickness="2" />
         </m:Map>
 
+        <ToggleButton Content="Start Drawing" Checked="StartDrawing" Unchecked="StopDrawing" Grid.Row="0" 
+                      VerticalAlignment="Top" HorizontalAlignment="Right" Margin="10" Width="80" Height="25"/>
+        
         <StackPanel Orientation="Vertical" Opacity="0.7" Grid.Row="1" HorizontalAlignment="Center">
             <DatePicker x:Name="datePicker"
                         SelectedDate="{Binding Date, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
@@ -63,11 +67,6 @@
                        Background="Black" />
 
             <TextBlock Text="{Binding MonthSeismicity, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
-                       Padding="5"
-                       Foreground="Yellow"
-                       Background="Black" />
-
-            <TextBlock Text="{Binding SixMonthsSeismicity, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
                        Padding="5"
                        Foreground="Yellow"
                        Background="Black" />
