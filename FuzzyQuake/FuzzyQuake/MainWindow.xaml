@@ -26,8 +26,18 @@
                              StrokeThickness="2" />
         </m:Map>
 
-        <ToggleButton Content="Start Drawing" Checked="StartDrawing" Unchecked="StopDrawing" Grid.Row="0" 
-                      VerticalAlignment="Top" HorizontalAlignment="Right" Margin="10" Width="80" Height="25"/>
+        <ToggleButton Content="Start Drawing"
+                      Checked="StartDrawing"
+                      Unchecked="StopDrawing"
+                      Grid.Row="0"
+                      Grid.RowSpan="2"
+                      Foreground="Yellow"
+                      Background="Black" 
+                      VerticalAlignment="Top"
+                      HorizontalAlignment="Right"
+                      Margin="10"
+                      Width="80"
+                      Height="25" />
         
         <StackPanel Orientation="Vertical" Opacity="0.7" Grid.Row="1" HorizontalAlignment="Center">
             <DatePicker x:Name="datePicker"
