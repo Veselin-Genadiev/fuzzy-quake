@@ -486,12 +486,12 @@ namespace FuzzyQuake.Lib
 
         private LinguisticVariable GetMagnitudeVariable(string magType)
         {
-            FuzzySet microMagnitude = new FuzzySet("Micro", new TrapezoidalFunction(0, 0, 2, 2.2f));
-            FuzzySet minorMagnitude = new FuzzySet("Minor", new TrapezoidalFunction(1.8f, 2, 4, 4.2f));
-            FuzzySet lightMagnitude = new FuzzySet("Light", new TrapezoidalFunction(3.8f, 4, 5, 5.2f));
-            FuzzySet moderateMagnitude = new FuzzySet("Moderate", new TrapezoidalFunction(4.8f, 5, 6, 6.2f));
-            FuzzySet strongMagnitude = new FuzzySet("Strong", new TrapezoidalFunction(5.8f, 6, 7, 7.2f));
-            FuzzySet majorMagnitude = new FuzzySet("Major", new TrapezoidalFunction(6.8f, 7, 8, 8.2f));
+            FuzzySet microMagnitude = new FuzzySet("Micro", new TrapezoidalFunction(0, 1, 1, 2.2f));
+            FuzzySet minorMagnitude = new FuzzySet("Minor", new TrapezoidalFunction(1.8f, 3, 3, 4.2f));
+            FuzzySet lightMagnitude = new FuzzySet("Light", new TrapezoidalFunction(3.8f, 4.5f, 4.5f, 5.2f));
+            FuzzySet moderateMagnitude = new FuzzySet("Moderate", new TrapezoidalFunction(4.8f, 5.5f, 5.5f, 6.2f));
+            FuzzySet strongMagnitude = new FuzzySet("Strong", new TrapezoidalFunction(5.8f, 6.5f, 6.5f, 7.2f));
+            FuzzySet majorMagnitude = new FuzzySet("Major", new TrapezoidalFunction(6.8f, 7.5f, 7.5f, 8.2f));
             FuzzySet greatMagnitude = new FuzzySet("Great", new TrapezoidalFunction(7.8f, 8, 12, 12));
 
             LinguisticVariable lvMagnitude = new LinguisticVariable(magType, 0, 12);
