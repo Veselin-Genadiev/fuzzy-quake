@@ -559,10 +559,10 @@ namespace FuzzyQuake.Lib
 
         private LinguisticVariable GetDepthVariable(string depthType)
         {
-            FuzzySet shallowDepth = new FuzzySet("Shallow", new TrapezoidalFunction(0, 0, 10, 10.5f));
-            FuzzySet fairlyDepth = new FuzzySet("Fairly", new TrapezoidalFunction(9.5f, 10, 20, 20.5f));
-            FuzzySet deepDepth = new FuzzySet("Deep", new TrapezoidalFunction(19.5f, 20, 40, 40.5f));
-            FuzzySet veryDeepDepth = new FuzzySet("VeryDeep", new TrapezoidalFunction(39.5f, 40, float.MaxValue, float.MaxValue));
+            FuzzySet shallowDepth = new FuzzySet("Shallow", new TrapezoidalFunction(0, 2, 8, 10.5f));
+            FuzzySet fairlyDepth = new FuzzySet("Fairly", new TrapezoidalFunction(9.5f, 12, 18, 20.5f));
+            FuzzySet deepDepth = new FuzzySet("Deep", new TrapezoidalFunction(19.5f, 25, 35, 40.5f));
+            FuzzySet veryDeepDepth = new FuzzySet("VeryDeep", new TrapezoidalFunction(35, 40, float.MaxValue, float.MaxValue));
 
             LinguisticVariable lvDepth = new LinguisticVariable(depthType, 0, float.MaxValue);
 
@@ -578,8 +578,8 @@ namespace FuzzyQuake.Lib
         {
             FuzzySet lowEnv = new FuzzySet("Low", new TrapezoidalFunction(1, 2.5f, 2.5f, 4.2f));
             FuzzySet mediumEnv = new FuzzySet("Medium", new TrapezoidalFunction(3.8f, 4.5f, 4.5f, 5.2f));
-            FuzzySet strongEnv = new FuzzySet("Strong", new TrapezoidalFunction(5.8f, 7, 7, 8.2f));
-            FuzzySet greatEnv = new FuzzySet("Great", new TrapezoidalFunction(8.8f, 10.5f, 12, 12));
+            FuzzySet strongEnv = new FuzzySet("Strong", new TrapezoidalFunction(4.8f, 6.5f, 6.5f, 8.2f));
+            FuzzySet greatEnv = new FuzzySet("Great", new TrapezoidalFunction(7.8f, 10.5f, 12, 12));
 
             LinguisticVariable lvSeismicEnv = new LinguisticVariable(seismicityType, 1, 12);
 
