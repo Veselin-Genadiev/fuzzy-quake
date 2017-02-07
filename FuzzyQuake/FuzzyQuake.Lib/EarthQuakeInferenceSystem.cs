@@ -579,7 +579,7 @@ namespace FuzzyQuake.Lib
             FuzzySet lowEnv = new FuzzySet("Low", new TrapezoidalFunction(1, 2.5f, 2.5f, 4.2f));
             FuzzySet mediumEnv = new FuzzySet("Medium", new TrapezoidalFunction(3.8f, 4.5f, 4.5f, 5.2f));
             FuzzySet strongEnv = new FuzzySet("Strong", new TrapezoidalFunction(5.8f, 7, 7, 8.2f));
-            FuzzySet greatEnv = new FuzzySet("Great", new TrapezoidalFunction(8.8f, 10.5f, 10.5f, 12));
+            FuzzySet greatEnv = new FuzzySet("Great", new TrapezoidalFunction(8.8f, 10.5f, 12, 12));
 
             LinguisticVariable lvSeismicEnv = new LinguisticVariable(seismicityType, 1, 12);
 
