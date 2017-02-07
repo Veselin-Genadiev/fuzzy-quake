@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 
 namespace FuzzyQuake.Lib.Utils
 {
-    public class Inputs
+    public class InputOutputs
     {
-        public Inputs(int n)
+        public InputOutputs(int n)
         {
             // Input
             this.Times = new long[n];
@@ -33,6 +33,10 @@ namespace FuzzyQuake.Lib.Utils
             this.MaxTenYearsDepths = new float[n];
             this.MaxFiftyYearsDepths = new float[n];
             this.MaxCenturyDepths = new float[n];
+
+            this.Seismicities = new float[n];
+            this.WeekSeismicities = new float[n];
+            this.MonthSeismicities = new float[n];
         }
 
         // Input
@@ -79,5 +83,11 @@ namespace FuzzyQuake.Lib.Utils
         public float[] MaxFiftyYearsDepths { get; set; }
 
         public float[] MaxCenturyDepths { get; set; }
+
+        public float[] Seismicities { get; set; }
+
+        public float[] WeekSeismicities { get; set; }
+
+        public float[] MonthSeismicities { get; set; }
     }
 }

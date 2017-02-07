@@ -13,7 +13,7 @@ namespace FuzzyQuake.Lib
     public class EarthQuakeInferenceSystem
     {
         private InferenceSystem quakeSystem;
-        private Inputs inputs;
+        private InputOutputs inputOutputs;
         private List<Rule> rules = new List<Rule>();
 
         public DateTime StartDate { get; set; }
@@ -57,7 +57,7 @@ namespace FuzzyQuake.Lib
                 return isDateRight && isNearOrFair;
             }).ToArray();
 
-            inputs = new Inputs(lines.Length);
+            inputOutputs = new InputOutputs(lines.Length);
 
             for (int i = 0; i < lines.Length; i++)
             {
@@ -71,103 +71,130 @@ namespace FuzzyQuake.Lib
                 float depth = float.Parse(values[3]);
                 float magnitude = float.Parse(values[4]);
 
-                inputs.Times[i] = time;
-                inputs.Distances[i] = (float)coordinate.MinDistanceToRectangle(startCoordinate, endCoordinate) / 1000;
-                inputs.Depths[i] = depth;
-                inputs.Magnitudes[i] = magnitude;
+                inputOutputs.Times[i] = time;
+                inputOutputs.Distances[i] = (float)coordinate.MinDistanceToRectangle(startCoordinate, endCoordinate) / 1000;
+                inputOutputs.Depths[i] = depth;
+                inputOutputs.Magnitudes[i] = magnitude;
             }
 
             for (int i = 0; i < lines.Length; i++)
             {
-                var weekMagnitudes = inputs.Magnitudes.Where((d, index) => inputs.Times[index] < StartDate.Ticks &&
-                    inputs.Times[index] > StartDate.AddDays(-7).Ticks);
+                var weekMagnitudes = inputOutputs.Magnitudes.Where((d, index) => inputOutputs.Times[index] < StartDate.Ticks &&
+                    inputOutputs.Times[index] > StartDate.AddDays(-7).Ticks);
 
-                var weekDepths = inputs.Depths.Where((d, index) => inputs.Times[index] < StartDate.Ticks &&
-                    inputs.Times[index] > StartDate.AddDays(-7).Ticks);
+                var weekDepths = inputOutputs.Depths.Where((d, index) => inputOutputs.Times[index] < StartDate.Ticks &&
+                    inputOutputs.Times[index] > StartDate.AddDays(-7).Ticks);
 
-                inputs.WeekConcentrations[i] = weekMagnitudes.Count();
-                inputs.MaxWeekMagnitudes[i] = weekMagnitudes.Count() == 0 ? 0 : weekMagnitudes.Max();
-                inputs.MaxWeekDepths[i] = weekDepths.Count() == 0 ? 0 :
-                    weekDepths.ElementAt(weekMagnitudes.ToList().IndexOf(inputs.MaxWeekMagnitudes[i]));
+                inputOutputs.WeekConcentrations[i] = weekMagnitudes.Count();
+                inputOutputs.MaxWeekMagnitudes[i] = weekMagnitudes.Count() == 0 ? 0 : weekMagnitudes.Max();
+                inputOutputs.MaxWeekDepths[i] = weekDepths.Count() == 0 ? 0 :
+                    weekDepths.ElementAt(weekMagnitudes.ToList().IndexOf(inputOutputs.MaxWeekMagnitudes[i]));
 
-                var twoWeekMagnitudes = inputs.Magnitudes.Where((d, index) => inputs.Times[index] < StartDate.AddDays(-7).Ticks &&
-                    inputs.Times[index] > StartDate.AddDays(-14).Ticks);
+                var twoWeekMagnitudes = inputOutputs.Magnitudes.Where((d, index) => inputOutputs.Times[index] < StartDate.AddDays(-7).Ticks &&
+                    inputOutputs.Times[index] > StartDate.AddDays(-14).Ticks);
 
-                var twoWeekDepths = inputs.Depths.Where((d, index) => inputs.Times[index] < StartDate.AddDays(-7).Ticks &&
-                    inputs.Times[index] > StartDate.AddDays(-14).Ticks);
+                var twoWeekDepths = inputOutputs.Depths.Where((d, index) => inputOutputs.Times[index] < StartDate.AddDays(-7).Ticks &&
+                    inputOutputs.Times[index] > StartDate.AddDays(-14).Ticks);
 
-                inputs.TwoWeeksConcentrations[i] = twoWeekMagnitudes.Count();
-                inputs.MaxTwoWeeksMagnitudes[i] = twoWeekMagnitudes.Count() == 0 ? 0 : twoWeekMagnitudes.Max();
-                inputs.MaxTwoWeeksDepths[i] = twoWeekDepths.Count() == 0 ? 0 :
-                    twoWeekDepths.ElementAt(twoWeekMagnitudes.ToList().IndexOf(inputs.MaxTwoWeeksMagnitudes[i]));
+                inputOutputs.TwoWeeksConcentrations[i] = twoWeekMagnitudes.Count();
+                inputOutputs.MaxTwoWeeksMagnitudes[i] = twoWeekMagnitudes.Count() == 0 ? 0 : twoWeekMagnitudes.Max();
+                inputOutputs.MaxTwoWeeksDepths[i] = twoWeekDepths.Count() == 0 ? 0 :
+                    twoWeekDepths.ElementAt(twoWeekMagnitudes.ToList().IndexOf(inputOutputs.MaxTwoWeeksMagnitudes[i]));
 
-                var fiveYearMagnitudes = inputs.Magnitudes.Where((d, index) => inputs.Times[index] < StartDate.AddYears(-1).Ticks &&
-                    inputs.Times[index] > StartDate.AddYears(-5).Ticks);
+                var fiveYearMagnitudes = inputOutputs.Magnitudes.Where((d, index) => inputOutputs.Times[index] < StartDate.AddYears(-1).Ticks &&
+                    inputOutputs.Times[index] > StartDate.AddYears(-5).Ticks);
 
-                var fiveYearDepths = inputs.Depths.Where((d, index) => inputs.Times[index] < StartDate.AddYears(-1).Ticks &&
-                    inputs.Times[index] > StartDate.AddYears(-5).Ticks);
+                var fiveYearDepths = inputOutputs.Depths.Where((d, index) => inputOutputs.Times[index] < StartDate.AddYears(-1).Ticks &&
+                    inputOutputs.Times[index] > StartDate.AddYears(-5).Ticks);
 
-                inputs.FiveYearsConcentrations[i] = fiveYearMagnitudes.Count();
-                inputs.MaxFiveYearsMagnitudes[i] = fiveYearMagnitudes.Count() == 0 ? 0 : fiveYearMagnitudes.Max();
-                inputs.MaxFiveYearsDepths[i] = fiveYearDepths.Count() == 0 ? 0 :
-                    fiveYearDepths.ElementAt(fiveYearMagnitudes.ToList().IndexOf(inputs.MaxFiveYearsMagnitudes[i]));
+                inputOutputs.FiveYearsConcentrations[i] = fiveYearMagnitudes.Count();
+                inputOutputs.MaxFiveYearsMagnitudes[i] = fiveYearMagnitudes.Count() == 0 ? 0 : fiveYearMagnitudes.Max();
+                inputOutputs.MaxFiveYearsDepths[i] = fiveYearDepths.Count() == 0 ? 0 :
+                    fiveYearDepths.ElementAt(fiveYearMagnitudes.ToList().IndexOf(inputOutputs.MaxFiveYearsMagnitudes[i]));
 
-                var tenYearMagnitudes = inputs.Magnitudes.Where((d, index) => inputs.Times[index] < StartDate.AddYears(-5).Ticks &&
-                    inputs.Times[index] > StartDate.AddYears(-10).Ticks);
+                var tenYearMagnitudes = inputOutputs.Magnitudes.Where((d, index) => inputOutputs.Times[index] < StartDate.AddYears(-5).Ticks &&
+                    inputOutputs.Times[index] > StartDate.AddYears(-10).Ticks);
 
-                var tenYearDepths = inputs.Depths.Where((d, index) => inputs.Times[index] < StartDate.AddYears(-5).Ticks &&
-                    inputs.Times[index] > StartDate.AddYears(-10).Ticks);
+                var tenYearDepths = inputOutputs.Depths.Where((d, index) => inputOutputs.Times[index] < StartDate.AddYears(-5).Ticks &&
+                    inputOutputs.Times[index] > StartDate.AddYears(-10).Ticks);
 
-                inputs.TenYearsConcentrations[i] = tenYearMagnitudes.Count();
-                inputs.MaxTenYearsMagnitudes[i] = tenYearMagnitudes.Count() == 0 ? 0 : tenYearMagnitudes.Max();
-                inputs.MaxTenYearsDepths[i] = tenYearDepths.Count() == 0 ? 0 :
-                    tenYearDepths.ElementAt(tenYearMagnitudes.ToList().IndexOf(inputs.MaxTenYearsMagnitudes[i]));
+                inputOutputs.TenYearsConcentrations[i] = tenYearMagnitudes.Count();
+                inputOutputs.MaxTenYearsMagnitudes[i] = tenYearMagnitudes.Count() == 0 ? 0 : tenYearMagnitudes.Max();
+                inputOutputs.MaxTenYearsDepths[i] = tenYearDepths.Count() == 0 ? 0 :
+                    tenYearDepths.ElementAt(tenYearMagnitudes.ToList().IndexOf(inputOutputs.MaxTenYearsMagnitudes[i]));
 
-                var fiftyYearMagnitudes = inputs.Magnitudes.Where((d, index) => inputs.Times[index] < StartDate.AddYears(-10).Ticks &&
-                    inputs.Times[index] > StartDate.AddYears(-50).Ticks);
+                var fiftyYearMagnitudes = inputOutputs.Magnitudes.Where((d, index) => inputOutputs.Times[index] < StartDate.AddYears(-10).Ticks &&
+                    inputOutputs.Times[index] > StartDate.AddYears(-50).Ticks);
 
-                var fiftyYearDepths = inputs.Depths.Where((d, index) => inputs.Times[index] < StartDate.AddYears(-10).Ticks &&
-                    inputs.Times[index] > StartDate.AddYears(-50).Ticks);
+                var fiftyYearDepths = inputOutputs.Depths.Where((d, index) => inputOutputs.Times[index] < StartDate.AddYears(-10).Ticks &&
+                    inputOutputs.Times[index] > StartDate.AddYears(-50).Ticks);
 
-                inputs.FiftyYearsConcentrations[i] = fiftyYearMagnitudes.Count();
-                inputs.MaxFiftyYearsMagnitudes[i] = fiftyYearMagnitudes.Count() == 0 ? 0 : fiftyYearMagnitudes.Max();
-                inputs.MaxFiftyYearsDepths[i] = fiftyYearDepths.Count() == 0 ? 0 :
-                    fiftyYearDepths.ElementAt(fiftyYearMagnitudes.ToList().IndexOf(inputs.MaxFiftyYearsMagnitudes[i]));
+                inputOutputs.FiftyYearsConcentrations[i] = fiftyYearMagnitudes.Count();
+                inputOutputs.MaxFiftyYearsMagnitudes[i] = fiftyYearMagnitudes.Count() == 0 ? 0 : fiftyYearMagnitudes.Max();
+                inputOutputs.MaxFiftyYearsDepths[i] = fiftyYearDepths.Count() == 0 ? 0 :
+                    fiftyYearDepths.ElementAt(fiftyYearMagnitudes.ToList().IndexOf(inputOutputs.MaxFiftyYearsMagnitudes[i]));
 
-                var centuryMagnitudes = inputs.Magnitudes.Where((d, index) => inputs.Times[index] < StartDate.AddYears(-50).Ticks &&
-                    inputs.Times[index] > StartDate.AddYears(-100).Ticks);
+                var centuryMagnitudes = inputOutputs.Magnitudes.Where((d, index) => inputOutputs.Times[index] < StartDate.AddYears(-50).Ticks &&
+                    inputOutputs.Times[index] > StartDate.AddYears(-100).Ticks);
 
-                var centuryDepths = inputs.Depths.Where((d, index) => inputs.Times[index] < StartDate.AddYears(-50).Ticks &&
-                    inputs.Times[index] > StartDate.AddYears(-100).Ticks);
+                var centuryDepths = inputOutputs.Depths.Where((d, index) => inputOutputs.Times[index] < StartDate.AddYears(-50).Ticks &&
+                    inputOutputs.Times[index] > StartDate.AddYears(-100).Ticks);
 
-                inputs.CenturyConcentrations[i] = centuryMagnitudes.Count();
-                inputs.MaxCenturyMagnitudes[i] = centuryMagnitudes.Count() == 0 ? 0 : centuryMagnitudes.Max();
-                inputs.MaxCenturyDepths[i] = centuryDepths.Count() == 0 ? 0 :
-                    centuryDepths.ElementAt(centuryMagnitudes.ToList().IndexOf(inputs.MaxCenturyMagnitudes[i]));
+                inputOutputs.CenturyConcentrations[i] = centuryMagnitudes.Count();
+                inputOutputs.MaxCenturyMagnitudes[i] = centuryMagnitudes.Count() == 0 ? 0 : centuryMagnitudes.Max();
+                inputOutputs.MaxCenturyDepths[i] = centuryDepths.Count() == 0 ? 0 :
+                    centuryDepths.ElementAt(centuryMagnitudes.ToList().IndexOf(inputOutputs.MaxCenturyMagnitudes[i]));
             }
 
             for (int i = 0; i < lines.Length; i++)
             {
-                quakeSystem.SetInput("Date", inputs.Times[i]);
-                quakeSystem.SetInput("Distance", inputs.Distances[i]);
-                quakeSystem.SetInput("WeekConcentration", inputs.WeekConcentrations[i]);
-                quakeSystem.SetInput("MaxWeekMagnitude", inputs.MaxWeekMagnitudes[i]);
-                quakeSystem.SetInput("TwoWeeksConcentration", inputs.TwoWeeksConcentrations[i]);
-                quakeSystem.SetInput("MaxTwoWeeksMagnitude", inputs.MaxTwoWeeksMagnitudes[i]);
-                quakeSystem.SetInput("FiveYearsConcentration", inputs.FiveYearsConcentrations[i]);
-                quakeSystem.SetInput("MaxFiveYearsMagnitude", inputs.MaxFiveYearsMagnitudes[i]);
-                quakeSystem.SetInput("TenYearsConcentration", inputs.TenYearsConcentrations[i]);
-                quakeSystem.SetInput("MaxTenYearsMagnitude", inputs.MaxTenYearsMagnitudes[i]);
-                quakeSystem.SetInput("FiftyYearsConcentration", inputs.FiftyYearsConcentrations[i]);
-                quakeSystem.SetInput("MaxFiftyYearsMagnitude", inputs.MaxFiftyYearsMagnitudes[i]);
-                quakeSystem.SetInput("CenturyConcentration", inputs.CenturyConcentrations[i]);
-                quakeSystem.SetInput("MaxCenturyMagnitude", inputs.MaxCenturyMagnitudes[i]);
-                quakeSystem.SetInput("MaxWeekDepth", inputs.MaxWeekDepths[i]);
-                quakeSystem.SetInput("MaxTwoWeeksDepth", inputs.MaxTwoWeeksDepths[i]);
-                quakeSystem.SetInput("MaxFiveYearsDepth", inputs.MaxFiveYearsDepths[i]);
-                quakeSystem.SetInput("MaxTenYearsDepth", inputs.MaxTenYearsDepths[i]);
-                quakeSystem.SetInput("MaxFiftyYearsDepth", inputs.MaxFiftyYearsDepths[i]);
-                quakeSystem.SetInput("MaxCenturyDepth", inputs.MaxCenturyDepths[i]);
+                    quakeSystem.SetInput("Date", inputOutputs.Times[i]);
+                    quakeSystem.SetInput("Distance", inputOutputs.Distances[i]);
+                    quakeSystem.SetInput("WeekConcentration", inputOutputs.WeekConcentrations[i]);
+                    quakeSystem.SetInput("MaxWeekMagnitude", inputOutputs.MaxWeekMagnitudes[i]);
+                    quakeSystem.SetInput("TwoWeeksConcentration", inputOutputs.TwoWeeksConcentrations[i]);
+                    quakeSystem.SetInput("MaxTwoWeeksMagnitude", inputOutputs.MaxTwoWeeksMagnitudes[i]);
+                    quakeSystem.SetInput("FiveYearsConcentration", inputOutputs.FiveYearsConcentrations[i]);
+                    quakeSystem.SetInput("MaxFiveYearsMagnitude", inputOutputs.MaxFiveYearsMagnitudes[i]);
+                    quakeSystem.SetInput("TenYearsConcentration", inputOutputs.TenYearsConcentrations[i]);
+                    quakeSystem.SetInput("MaxTenYearsMagnitude", inputOutputs.MaxTenYearsMagnitudes[i]);
+                    quakeSystem.SetInput("FiftyYearsConcentration", inputOutputs.FiftyYearsConcentrations[i]);
+                    quakeSystem.SetInput("MaxFiftyYearsMagnitude", inputOutputs.MaxFiftyYearsMagnitudes[i]);
+                    quakeSystem.SetInput("CenturyConcentration", inputOutputs.CenturyConcentrations[i]);
+                    quakeSystem.SetInput("MaxCenturyMagnitude", inputOutputs.MaxCenturyMagnitudes[i]);
+                    quakeSystem.SetInput("MaxWeekDepth", inputOutputs.MaxWeekDepths[i]);
+                    quakeSystem.SetInput("MaxTwoWeeksDepth", inputOutputs.MaxTwoWeeksDepths[i]);
+                    quakeSystem.SetInput("MaxFiveYearsDepth", inputOutputs.MaxFiveYearsDepths[i]);
+                    quakeSystem.SetInput("MaxTenYearsDepth", inputOutputs.MaxTenYearsDepths[i]);
+                    quakeSystem.SetInput("MaxFiftyYearsDepth", inputOutputs.MaxFiftyYearsDepths[i]);
+                    quakeSystem.SetInput("MaxCenturyDepth", inputOutputs.MaxCenturyDepths[i]);
+
+                try
+                {
+                    inputOutputs.Seismicities[i] = quakeSystem.Evaluate("Seismicity");
+                }
+                catch (Exception ex)
+                {
+
+                }
+
+                try
+                {
+                    inputOutputs.WeekSeismicities[i] = quakeSystem.Evaluate("WeekSeismicity");
+                }
+                catch (Exception ex)
+                {
+
+                }
+
+                try
+                {
+                    inputOutputs.MonthSeismicities[i] = quakeSystem.Evaluate("MonthSeismicity");
+                }
+                catch (Exception ex)
+                {
+
+                }
             }
         }
 
@@ -175,7 +202,7 @@ namespace FuzzyQuake.Lib
         {
             try
             {
-                return GetSeismicityLabel(quakeSystem.Evaluate("Seismicity"));
+                return GetSeismicityLabel(inputOutputs.Seismicities.Max());
             }
             catch
             {
@@ -187,7 +214,7 @@ namespace FuzzyQuake.Lib
         {
             try
             {
-                return GetSeismicityLabel(quakeSystem.Evaluate("WeekSeismicity"));
+                return GetSeismicityLabel(inputOutputs.WeekSeismicities.Max());
             }
             catch
             {
@@ -199,7 +226,7 @@ namespace FuzzyQuake.Lib
         {
             try
             {
-                return GetSeismicityLabel(quakeSystem.Evaluate("MonthSeismicity"));
+                return GetSeismicityLabel(inputOutputs.MonthSeismicities.Max());
             }
             catch
             {
@@ -432,7 +459,7 @@ namespace FuzzyQuake.Lib
             FuzzySet distanceNear = new FuzzySet("Near", new TrapezoidalFunction(0, 0, 15, 22));
             FuzzySet distanceFair = new FuzzySet("Fair", new TrapezoidalFunction(20, 30, 40));
 
-            LinguisticVariable lvDistance = new LinguisticVariable("Distance", 0, 80);
+            LinguisticVariable lvDistance = new LinguisticVariable("Distance", 0, 40);
             lvDistance.AddLabel(distanceNear);
             lvDistance.AddLabel(distanceFair);
 
@@ -454,20 +481,20 @@ namespace FuzzyQuake.Lib
             var fiftyYearBehind = StartDate.AddYears(-50);
             var centuryBehind = StartDate.AddYears(-100);
 
-            FuzzySet dateWeek = new FuzzySet("Week", new TrapezoidalFunction(0, 0, weekBehind.Ticks, weekBehind.AddDays(1).Ticks));
-            FuzzySet dateTwoWeeks = new FuzzySet("TwoWeeks", new TrapezoidalFunction(weekBehind.AddDays(-1).Ticks, weekBehind.Ticks, twoWeeksBehind.Ticks, twoWeeksBehind.AddDays(1).Ticks));
-            FuzzySet dateMonth = new FuzzySet("Month", new TrapezoidalFunction(twoWeeksBehind.AddDays(-2).Ticks, twoWeeksBehind.Ticks, monthBehind.Ticks, monthBehind.AddDays(2).Ticks));
-            FuzzySet dateThreeMonths = new FuzzySet("ThreeMonths", new TrapezoidalFunction(monthBehind.AddDays(-7).Ticks, monthBehind.Ticks, threeMonthBehind.Ticks, threeMonthBehind.AddDays(7).Ticks));
-            FuzzySet dateSixMonths = new FuzzySet("SixMonths", new TrapezoidalFunction(threeMonthBehind.AddDays(-14).Ticks, threeMonthBehind.Ticks, sixMonthBehind.Ticks, sixMonthBehind.AddDays(14).Ticks));
-            FuzzySet dateYear = new FuzzySet("Year", new TrapezoidalFunction(sixMonthBehind.AddMonths(-1).Ticks, sixMonthBehind.Ticks, yearBehind.Ticks, yearBehind.AddMonths(1).Ticks));
-            FuzzySet dateTwoYears = new FuzzySet("TwoYears", new TrapezoidalFunction(yearBehind.AddMonths(-2).Ticks, yearBehind.Ticks, twoYearBehind.Ticks, twoYearBehind.AddMonths(2).Ticks));
-            FuzzySet dateFiveYears = new FuzzySet("FiveYears", new TrapezoidalFunction(twoYearBehind.AddMonths(-3).Ticks, twoYearBehind.Ticks, fiveYearBehind.Ticks, fiveYearBehind.AddMonths(3).Ticks));
-            FuzzySet dateTenYears = new FuzzySet("TenYears", new TrapezoidalFunction(fiveYearBehind.AddMonths(-6).Ticks, fiveYearBehind.Ticks, tenYearBehind.Ticks, tenYearBehind.AddMonths(6).Ticks));
-            FuzzySet dateTwentyYears = new FuzzySet("TwentyYears", new TrapezoidalFunction(tenYearBehind.AddYears(-1).Ticks, tenYearBehind.Ticks, twentyYearBehind.Ticks, twentyYearBehind.AddYears(1).Ticks));
-            FuzzySet dateFiftyYears = new FuzzySet("FiftyYears", new TrapezoidalFunction(twentyYearBehind.AddYears(-2).Ticks, twentyYearBehind.Ticks, fiftyYearBehind.Ticks, fiftyYearBehind.AddYears(2).Ticks));
-            FuzzySet dateCentury = new FuzzySet("Century", new TrapezoidalFunction(fiftyYearBehind.AddYears(-5).Ticks, fiftyYearBehind.Ticks, centuryBehind.Ticks, centuryBehind.AddYears(5).Ticks));
+            FuzzySet dateWeek = new FuzzySet("Week", new TrapezoidalFunction(weekBehind.AddDays(-1).Ticks, weekBehind.Ticks, StartDate.Ticks, StartDate.Ticks));
+            FuzzySet dateTwoWeeks = new FuzzySet("TwoWeeks", new TrapezoidalFunction(twoWeeksBehind.AddDays(-1).Ticks, twoWeeksBehind.Ticks, weekBehind.Ticks, weekBehind.AddDays(1).Ticks));
+            FuzzySet dateMonth = new FuzzySet("Month", new TrapezoidalFunction(monthBehind.AddDays(-2).Ticks, monthBehind.Ticks, twoWeeksBehind.Ticks, twoWeeksBehind.AddDays(2).Ticks));
+            FuzzySet dateThreeMonths = new FuzzySet("ThreeMonths", new TrapezoidalFunction(threeMonthBehind.AddDays(-7).Ticks, threeMonthBehind.Ticks, monthBehind.Ticks, monthBehind.AddDays(7).Ticks));
+            FuzzySet dateSixMonths = new FuzzySet("SixMonths", new TrapezoidalFunction(sixMonthBehind.AddDays(-14).Ticks, sixMonthBehind.Ticks, threeMonthBehind.Ticks, threeMonthBehind.AddDays(14).Ticks));
+            FuzzySet dateYear = new FuzzySet("Year", new TrapezoidalFunction(yearBehind.AddMonths(-1).Ticks, yearBehind.Ticks, sixMonthBehind.Ticks, sixMonthBehind.AddMonths(1).Ticks));
+            FuzzySet dateTwoYears = new FuzzySet("TwoYears", new TrapezoidalFunction(twoYearBehind.AddMonths(-2).Ticks, twoYearBehind.Ticks, yearBehind.Ticks, yearBehind.AddMonths(2).Ticks));
+            FuzzySet dateFiveYears = new FuzzySet("FiveYears", new TrapezoidalFunction(fiveYearBehind.AddMonths(-3).Ticks, fiveYearBehind.Ticks, twoYearBehind.Ticks, twoYearBehind.AddMonths(3).Ticks));
+            FuzzySet dateTenYears = new FuzzySet("TenYears", new TrapezoidalFunction(tenYearBehind.AddMonths(-6).Ticks, tenYearBehind.Ticks, fiveYearBehind.Ticks, fiveYearBehind.AddMonths(6).Ticks));
+            FuzzySet dateTwentyYears = new FuzzySet("TwentyYears", new TrapezoidalFunction(twentyYearBehind.AddYears(-1).Ticks, twentyYearBehind.Ticks, tenYearBehind.Ticks, tenYearBehind.AddYears(1).Ticks));
+            FuzzySet dateFiftyYears = new FuzzySet("FiftyYears", new TrapezoidalFunction(fiftyYearBehind.AddYears(-2).Ticks, fiftyYearBehind.Ticks, twentyYearBehind.Ticks, twentyYearBehind.AddYears(2).Ticks));
+            FuzzySet dateCentury = new FuzzySet("Century", new TrapezoidalFunction(centuryBehind.AddYears(-5).Ticks, centuryBehind.Ticks, fiftyYearBehind.Ticks, fiftyYearBehind.AddYears(5).Ticks));
 
-            LinguisticVariable lvDate = new LinguisticVariable("Date", 0, DateTime.MaxValue.Ticks);
+            LinguisticVariable lvDate = new LinguisticVariable("Date", centuryBehind.AddYears(-5).Ticks, StartDate.Ticks);
             lvDate.AddLabel(dateWeek);
             lvDate.AddLabel(dateTwoWeeks);
             lvDate.AddLabel(dateMonth);
@@ -526,10 +553,10 @@ namespace FuzzyQuake.Lib
 
         private LinguisticVariable GetSeismicityVariable(string seismicityType)
         {
-            FuzzySet lowEnv = new FuzzySet("Low", new TrapezoidalFunction(1, 1, 4, 4.2f));
-            FuzzySet mediumEnv = new FuzzySet("Medium", new TrapezoidalFunction(3.8f, 4, 8, 8.2f));
-            FuzzySet strongEnv = new FuzzySet("Strong", new TrapezoidalFunction(6.8f, 7, 10, 10.2f));
-            FuzzySet greatEnv = new FuzzySet("Great", new TrapezoidalFunction(7.8f, 8, 12, 12));
+            FuzzySet lowEnv = new FuzzySet("Low", new TrapezoidalFunction(1, 2.5f, 2.5f, 4.2f));
+            FuzzySet mediumEnv = new FuzzySet("Medium", new TrapezoidalFunction(3.8f, 4.5f, 4.5f, 5.2f));
+            FuzzySet strongEnv = new FuzzySet("Strong", new TrapezoidalFunction(5.8f, 7, 7, 8.2f));
+            FuzzySet greatEnv = new FuzzySet("Great", new TrapezoidalFunction(8.8f, 10.5f, 10.5f, 12));
 
             LinguisticVariable lvSeismicEnv = new LinguisticVariable(seismicityType, 1, 12);
 
