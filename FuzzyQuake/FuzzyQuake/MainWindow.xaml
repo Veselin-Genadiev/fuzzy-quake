@@ -29,6 +29,7 @@
         <ToggleButton Content="Start Drawing"
                       Checked="StartDrawing"
                       Unchecked="StopDrawing"
+                      IsChecked="{Binding IsDrawingChecked, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                       Grid.Row="0"
                       Grid.RowSpan="2"
                       Foreground="Yellow"

@@ -481,17 +481,40 @@ namespace FuzzyQuake.Lib
             var fiftyYearBehind = StartDate.AddYears(-50);
             var centuryBehind = StartDate.AddYears(-100);
 
-            FuzzySet dateWeek = new FuzzySet("Week", new TrapezoidalFunction(weekBehind.AddDays(-1).Ticks, weekBehind.Ticks, StartDate.Ticks, StartDate.Ticks));
-            FuzzySet dateTwoWeeks = new FuzzySet("TwoWeeks", new TrapezoidalFunction(twoWeeksBehind.AddDays(-1).Ticks, twoWeeksBehind.Ticks, weekBehind.Ticks, weekBehind.AddDays(1).Ticks));
-            FuzzySet dateMonth = new FuzzySet("Month", new TrapezoidalFunction(monthBehind.AddDays(-2).Ticks, monthBehind.Ticks, twoWeeksBehind.Ticks, twoWeeksBehind.AddDays(2).Ticks));
-            FuzzySet dateThreeMonths = new FuzzySet("ThreeMonths", new TrapezoidalFunction(threeMonthBehind.AddDays(-7).Ticks, threeMonthBehind.Ticks, monthBehind.Ticks, monthBehind.AddDays(7).Ticks));
-            FuzzySet dateSixMonths = new FuzzySet("SixMonths", new TrapezoidalFunction(sixMonthBehind.AddDays(-14).Ticks, sixMonthBehind.Ticks, threeMonthBehind.Ticks, threeMonthBehind.AddDays(14).Ticks));
-            FuzzySet dateYear = new FuzzySet("Year", new TrapezoidalFunction(yearBehind.AddMonths(-1).Ticks, yearBehind.Ticks, sixMonthBehind.Ticks, sixMonthBehind.AddMonths(1).Ticks));
-            FuzzySet dateTwoYears = new FuzzySet("TwoYears", new TrapezoidalFunction(twoYearBehind.AddMonths(-2).Ticks, twoYearBehind.Ticks, yearBehind.Ticks, yearBehind.AddMonths(2).Ticks));
-            FuzzySet dateFiveYears = new FuzzySet("FiveYears", new TrapezoidalFunction(fiveYearBehind.AddMonths(-3).Ticks, fiveYearBehind.Ticks, twoYearBehind.Ticks, twoYearBehind.AddMonths(3).Ticks));
-            FuzzySet dateTenYears = new FuzzySet("TenYears", new TrapezoidalFunction(tenYearBehind.AddMonths(-6).Ticks, tenYearBehind.Ticks, fiveYearBehind.Ticks, fiveYearBehind.AddMonths(6).Ticks));
-            FuzzySet dateTwentyYears = new FuzzySet("TwentyYears", new TrapezoidalFunction(twentyYearBehind.AddYears(-1).Ticks, twentyYearBehind.Ticks, tenYearBehind.Ticks, tenYearBehind.AddYears(1).Ticks));
-            FuzzySet dateFiftyYears = new FuzzySet("FiftyYears", new TrapezoidalFunction(fiftyYearBehind.AddYears(-2).Ticks, fiftyYearBehind.Ticks, twentyYearBehind.Ticks, twentyYearBehind.AddYears(2).Ticks));
+            var meanTicks = weekBehind.Ticks + (StartDate.Ticks - weekBehind.Ticks) / 2;
+            FuzzySet dateWeek = new FuzzySet("Week", new TrapezoidalFunction(weekBehind.AddDays(-1).Ticks, meanTicks, meanTicks, StartDate.Ticks));
+
+            meanTicks = twoWeeksBehind.Ticks + (weekBehind.Ticks - twoWeeksBehind.Ticks) / 2;
+            FuzzySet dateTwoWeeks = new FuzzySet("TwoWeeks", new TrapezoidalFunction(twoWeeksBehind.AddDays(-1).Ticks, meanTicks, meanTicks, weekBehind.AddDays(1).Ticks));
+
+            meanTicks = monthBehind.Ticks + (twoWeeksBehind.Ticks - monthBehind.Ticks) / 2;
+            FuzzySet dateMonth = new FuzzySet("Month", new TrapezoidalFunction(monthBehind.AddDays(-2).Ticks, meanTicks, meanTicks, twoWeeksBehind.AddDays(2).Ticks));
+
+            meanTicks = threeMonthBehind.Ticks + (monthBehind.Ticks - threeMonthBehind.Ticks) / 2;
+            FuzzySet dateThreeMonths = new FuzzySet("ThreeMonths", new TrapezoidalFunction(threeMonthBehind.AddDays(-7).Ticks, meanTicks, meanTicks, monthBehind.AddDays(7).Ticks));
+
+            meanTicks = sixMonthBehind.Ticks + (threeMonthBehind.Ticks - sixMonthBehind.Ticks) / 2;
+            FuzzySet dateSixMonths = new FuzzySet("SixMonths", new TrapezoidalFunction(sixMonthBehind.AddDays(-14).Ticks, meanTicks, meanTicks, threeMonthBehind.AddDays(14).Ticks));
+
+            meanTicks = yearBehind.Ticks + (sixMonthBehind.Ticks - yearBehind.Ticks) / 2;
+            FuzzySet dateYear = new FuzzySet("Year", new TrapezoidalFunction(yearBehind.AddMonths(-1).Ticks, meanTicks, meanTicks, sixMonthBehind.AddMonths(1).Ticks));
+
+            meanTicks = twoYearBehind.Ticks + (yearBehind.Ticks - twoYearBehind.Ticks) / 2;
+            FuzzySet dateTwoYears = new FuzzySet("TwoYears", new TrapezoidalFunction(twoYearBehind.AddMonths(-2).Ticks, meanTicks, meanTicks, yearBehind.AddMonths(2).Ticks));
+
+            meanTicks = fiveYearBehind.Ticks + (twoYearBehind.Ticks - fiveYearBehind.Ticks) / 2;
+            FuzzySet dateFiveYears = new FuzzySet("FiveYears", new TrapezoidalFunction(fiveYearBehind.AddMonths(-3).Ticks, meanTicks, meanTicks, twoYearBehind.AddMonths(3).Ticks));
+
+            meanTicks = tenYearBehind.Ticks + (fiveYearBehind.Ticks - tenYearBehind.Ticks) / 2;
+            FuzzySet dateTenYears = new FuzzySet("TenYears", new TrapezoidalFunction(tenYearBehind.AddMonths(-6).Ticks, meanTicks, meanTicks, fiveYearBehind.AddMonths(6).Ticks));
+
+            meanTicks = twentyYearBehind.Ticks + (tenYearBehind.Ticks - twentyYearBehind.Ticks) / 2;
+            FuzzySet dateTwentyYears = new FuzzySet("TwentyYears", new TrapezoidalFunction(twentyYearBehind.AddYears(-1).Ticks, meanTicks, meanTicks, tenYearBehind.AddYears(1).Ticks));
+
+            meanTicks = fiftyYearBehind.Ticks + (twentyYearBehind.Ticks - fiftyYearBehind.Ticks) / 2;
+            FuzzySet dateFiftyYears = new FuzzySet("FiftyYears", new TrapezoidalFunction(fiftyYearBehind.AddYears(-2).Ticks, meanTicks, meanTicks, twentyYearBehind.AddYears(2).Ticks));
+
+            meanTicks = centuryBehind.Ticks + (fiftyYearBehind.Ticks - centuryBehind.Ticks) / 2;
             FuzzySet dateCentury = new FuzzySet("Century", new TrapezoidalFunction(centuryBehind.AddYears(-5).Ticks, centuryBehind.Ticks, fiftyYearBehind.Ticks, fiftyYearBehind.AddYears(5).Ticks));
 
             LinguisticVariable lvDate = new LinguisticVariable("Date", centuryBehind.AddYears(-5).Ticks, StartDate.Ticks);

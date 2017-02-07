@@ -125,6 +125,7 @@ namespace FuzzyQuake
         {
             //Update drawing flag so that polygon isn't updated when mouse is moved.
             isDrawing = false;
+            viewModel.IsDrawingChecked = false;
 
             //The rectangle is drawn, grab it's locations and do something with them.
         }
@@ -343,6 +344,24 @@ namespace FuzzyQuake
                 if (PropertyChanged != null)
                 {
                     PropertyChanged(this, new PropertyChangedEventArgs("MonthSeismicity"));
+                }
+            }
+        }
+
+        private bool isDrawingChecked;
+        public bool IsDrawingChecked
+        {
+            get
+            {
+                return isDrawingChecked;
+            }
+            set
+            {
+                isDrawingChecked = value;
+
+                if (PropertyChanged != null)
+                {
+                    PropertyChanged(this, new PropertyChangedEventArgs("IsDrawingChecked"));
                 }
             }
         }
